@@ -55,6 +55,14 @@ button {
   padding: 1rem;
 }
 
+.product-image {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+}
+
 .muted {
   color: var(--muted);
 }
@@ -81,9 +89,96 @@ button {
   cursor: pointer;
 }
 
+.secondary.danger {
+  border-color: #e4a6a6;
+  color: #8f1f1f;
+  background: #fff4f4;
+}
+
 .row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  background: #fff;
+  color: var(--text);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.admin-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-field span {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.admin-field-wide {
+  grid-column: span 2;
+}
+
+.admin-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-checkbox input {
+  width: auto;
+}
+
+.admin-actions {
+  grid-column: span 2;
+}
+
+.admin-token {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.admin-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-error {
+  color: #b62323;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 760px) {
+  .admin-grid,
+  .admin-filters,
+  .admin-token {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-field-wide,
+  .admin-actions {
+    grid-column: span 1;
+  }
 }

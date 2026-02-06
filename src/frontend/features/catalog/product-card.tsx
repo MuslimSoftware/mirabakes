@@ -13,6 +13,9 @@ export function ProductCard({
 }) {
   return (
     <article className="card">
+      {product.imageUrl ? (
+        <img className="product-image" src={product.imageUrl} alt={product.name} loading="lazy" />
+      ) : null}
       <h3>{product.name}</h3>
       <p className="muted">{product.description}</p>
       <div className="row">
