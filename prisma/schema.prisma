@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  SUCCEEDED
+  FAILED
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  name        String
+  description String
+  priceCents  Int
+  imageUrl    String?
+  isAvailable Boolean     @default(true)
+  category    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  status          OrderStatus @default(PENDING)
+  subtotalCents   Int
+  customerEmail   String?
+  stripeSessionId String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           OrderItem[]
+  payments        Payment[]
+}
+
+model OrderItem {
+  id            String  @id @default(cuid())
+  orderId       String
+  productId     String
+  quantity      Int
+  unitPriceCents Int
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product       Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  orderId     String
+  provider    String        @default("stripe")
+  externalId  String
+  status      PaymentStatus
+  amountCents Int
+  createdAt   DateTime      @default(now())
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@unique([provider, externalId])
+}
