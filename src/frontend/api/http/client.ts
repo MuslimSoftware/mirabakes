@@ -67,3 +67,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   return parseResponse<T>(response);
 }
+
+export async function apiUpload<T>(path: string, formData: FormData, headers?: HeadersInit): Promise<T> {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: headers ?? {},
+    body: formData
+  });
+
+  return parseResponse<T>(response);
+}

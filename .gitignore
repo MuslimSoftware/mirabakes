@@ -6,3 +6,6 @@ coverage
 prisma/dev.db
 prisma/dev.db-journal
 *.tsbuildinfo
+ralph/
+public/uploads/*
+!public/uploads/.gitkeep

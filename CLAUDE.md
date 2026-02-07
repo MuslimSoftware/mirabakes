@@ -16,11 +16,13 @@
 - Docker Compose dev stack (`app + postgres`) with one-command startup
 
 ## Frontend (Current)
-- Landing/store page with product listing and simple cart interactions.
+- Landing/store page with product listing, skeleton loading, and responsive layout (320px–1280px).
+- Cart detail section listing selected items, quantities, line totals, subtotal, and empty state.
 - Checkout button that creates a Stripe Checkout session and redirects.
 - Order status page by `orderNumber`.
-- Admin products page at `/admin` with token input, filtering, pagination, and inline product editing.
-- Admin products page at `/admin` supports create, update, and delete actions.
+- Admin products page at `/admin` with token input, filtering, pagination, read-only cards with edit/delete icons.
+- Admin products page at `/admin` supports create (toggled via button), update, and delete with confirmation.
+- Product cards use flex-column layout for consistent price/action row alignment across grid.
 - API abstraction layer:
   - HTTP client: `src/frontend/api/http/client.ts`
   - API clients: products, checkout, orders, admin-products
@@ -77,6 +79,11 @@
 - `STRIPE_SUCCESS_URL_TEMPLATE`
 - `STRIPE_CANCEL_URL`
 - `ADMIN_API_TOKEN`
+
+## Caching Strategy
+- **Client (TanStack Query):** 60s staleTime, 10min gcTime, `keepPreviousData` for smooth pagination.
+- **Server (`GET /api/v1/products`):** `Cache-Control: public, s-maxage=30, stale-while-revalidate=60`.
+- **Images:** native `loading="lazy"` on product images.
 
 ## Not Yet Implemented
 - Real auth/admin permissions.

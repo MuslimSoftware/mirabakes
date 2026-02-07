@@ -1,13 +1,14 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   type AdminCreateProductInput,
   type AdminUpdateProductInput,
   adminProductsClient
 } from "@/frontend/api/clients/admin-products.client";
+import { uploadsClient } from "@/frontend/api/clients/uploads.client";
 import { ApiClientError } from "@/frontend/api/http/client";
 import { useApiPaginatedCached } from "@/frontend/hooks/useApiPaginatedCached";
 import type { Product } from "@/shared/types/domain";
@@ -61,7 +62,74 @@ function normalizeProductPayload(draft: ProductDraft): AdminCreateProductInput {
   };
 }
 
+function ImageUploadField({
+  imageUrl,
+  onImageUrlChange,
+  token
+}: {
+  imageUrl: string;
+  onImageUrlChange: (url: string) => void;
+  token: string;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => uploadsClient.uploadImage(file, token),
+    onSuccess: (data) => onImageUrlChange(data.url)
+  });
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) {
+      uploadMutation.mutate(file);
+    }
+    event.target.value = "";
+  }
+
+  return (
+    <div className="admin-field admin-field-wide">
+      <span>Image</span>
+      <div style={{ display: "flex", gap: "0.25rem" }}>
+        <input
+          value={imageUrl}
+          onChange={(event) => onImageUrlChange(event.target.value)}
+          placeholder="URL or upload"
+          style={{ flex: 1 }}
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleFileChange}
+          style={{ display: "none" }}
+        />
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploadMutation.isPending}
+          style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem", whiteSpace: "nowrap" }}
+        >
+          {uploadMutation.isPending ? "..." : "Upload"}
+        </button>
+      </div>
+      {uploadMutation.isError ? (
+        <small style={{ color: "var(--color-danger, red)" }}>
+          {(uploadMutation.error as ApiClientError)?.message ?? "Upload failed"}
+        </small>
+      ) : null}
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt="Preview"
+          style={{ marginTop: "0.25rem", maxHeight: "64px", borderRadius: "4px", objectFit: "cover" }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function ProductEditor({ product, token, onChanged }: ProductEditorProps) {
+  const [editing, setEditing] = useState(false);
   const [name, setName] = useState(product.name);
   const [description, setDescription] = useState(product.description);
   const [priceCents, setPriceCents] = useState(String(product.priceCents));
@@ -91,7 +159,10 @@ function ProductEditor({ product, token, onChanged }: ProductEditorProps) {
 
       return adminProductsClient.update(product.id, payload, token);
     },
-    onSuccess: onChanged
+    onSuccess: () => {
+      setEditing(false);
+      onChanged();
+    }
   });
 
   const deleteMutation = useMutation({
@@ -107,7 +178,64 @@ function ProductEditor({ product, token, onChanged }: ProductEditorProps) {
     deleteMutation.mutate();
   }
 
+  function handleCancel() {
+    setName(product.name);
+    setDescription(product.description);
+    setPriceCents(String(product.priceCents));
+    setCategory(product.category ?? "");
+    setImageUrl(product.imageUrl ?? "");
+    setIsAvailable(product.isAvailable);
+    setEditing(false);
+  }
+
   const mutationError = updateMutation.error ?? deleteMutation.error;
+  const busy = updateMutation.isPending || deleteMutation.isPending;
+
+  if (!editing) {
+    return (
+      <article className="card">
+        <div className="row" style={{ marginBottom: "0.5rem" }}>
+          <h4 style={{ margin: 0, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{product.name}</h4>
+          <div className="row" style={{ gap: "0.25rem", flexWrap: "nowrap", flexShrink: 0 }}>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setEditing(true)}
+              title="Edit"
+              style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
+            >
+              &#9998;
+            </button>
+            <button
+              type="button"
+              className="secondary danger"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              title="Delete"
+              style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
+            >
+              {deleteMutation.isPending ? "..." : "\u2715"}
+            </button>
+          </div>
+        </div>
+        <p className="muted" style={{ fontSize: "0.9rem", marginBottom: "0.25rem" }}>
+          {product.description}
+        </p>
+        <div className="row">
+          <strong>${(product.priceCents / 100).toFixed(2)}</strong>
+          <small className="muted">{product.category ?? "uncategorized"}</small>
+          <small className={product.isAvailable ? "" : "muted"}>
+            {product.isAvailable ? "Available" : "Unavailable"}
+          </small>
+        </div>
+        {mutationError ? (
+          <p className="admin-error">
+            {(mutationError as ApiClientError)?.message ?? "Failed"}
+          </p>
+        ) : null}
+      </article>
+    );
+  }
 
   return (
     <article className="card">
@@ -141,10 +269,7 @@ function ProductEditor({ product, token, onChanged }: ProductEditorProps) {
           <input value={category} onChange={(event) => setCategory(event.target.value)} />
         </label>
 
-        <label className="admin-field">
-          <span>Image URL</span>
-          <input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} />
-        </label>
+        <ImageUploadField imageUrl={imageUrl} onImageUrlChange={setImageUrl} token={token} />
 
         <label className="admin-checkbox">
           <input
@@ -160,17 +285,17 @@ function ProductEditor({ product, token, onChanged }: ProductEditorProps) {
           <div className="row">
             <button
               type="button"
-              className="secondary danger"
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending || updateMutation.isPending}
+              className="secondary"
+              onClick={handleCancel}
+              disabled={busy}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              Cancel
             </button>
             <button
               type="button"
               className="primary"
               onClick={() => updateMutation.mutate()}
-              disabled={deleteMutation.isPending || updateMutation.isPending}
+              disabled={busy}
             >
               {updateMutation.isPending ? "Saving..." : "Save"}
             </button>
@@ -248,13 +373,11 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
           />
         </label>
 
-        <label className="admin-field">
-          <span>Image URL</span>
-          <input
-            value={draft.imageUrl}
-            onChange={(event) => setField("imageUrl", event.target.value)}
-          />
-        </label>
+        <ImageUploadField
+          imageUrl={draft.imageUrl}
+          onImageUrlChange={(url) => setField("imageUrl", url)}
+          token={token}
+        />
 
         <label className="admin-checkbox">
           <input
@@ -290,6 +413,7 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
 export function AdminProductsPanel() {
   const [token, setToken] = useState("");
   const [tokenDraft, setTokenDraft] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
@@ -362,6 +486,11 @@ export function AdminProductsPanel() {
     queryClient.invalidateQueries({ queryKey: ["admin-products", token] });
   }
 
+  function handleCreated() {
+    setShowCreate(false);
+    refreshList();
+  }
+
   const isUnauthorized =
     productsQuery.error instanceof ApiClientError && productsQuery.error.status === 401;
 
@@ -370,24 +499,34 @@ export function AdminProductsPanel() {
       <h1>Admin Products</h1>
       <p className="muted">Manage catalog items, create new products, and delete old ones.</p>
 
-      <section className="card" style={{ marginBottom: "1rem" }}>
-        <div className="admin-token">
-          <label className="admin-field admin-field-wide">
-            <span>Admin token</span>
-            <input
-              type="password"
-              value={tokenDraft}
-              onChange={(event) => setTokenDraft(event.target.value)}
-              placeholder="Paste ADMIN_API_TOKEN"
-            />
-          </label>
-          <button className="primary" type="button" onClick={applyToken}>
-            Unlock
+      {!token ? (
+        <section className="card" style={{ marginBottom: "1rem" }}>
+          <div className="admin-token">
+            <label className="admin-field admin-field-wide">
+              <span>Admin token</span>
+              <input
+                type="password"
+                value={tokenDraft}
+                onChange={(event) => setTokenDraft(event.target.value)}
+                placeholder="Paste ADMIN_API_TOKEN"
+              />
+            </label>
+            <button className="primary" type="button" onClick={applyToken}>
+              Unlock
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {token && !showCreate ? (
+        <div style={{ marginBottom: "1rem" }}>
+          <button className="primary" type="button" onClick={() => setShowCreate(true)}>
+            Create Product
           </button>
         </div>
-      </section>
+      ) : null}
 
-      {token ? <CreateProductForm token={token} onCreated={refreshList} /> : null}
+      {token && showCreate ? <CreateProductForm token={token} onCreated={handleCreated} /> : null}
 
       {token ? (
         <section className="card" style={{ marginBottom: "1rem" }}>
@@ -447,8 +586,8 @@ export function AdminProductsPanel() {
         ))}
       </section>
 
-      {token && productsQuery.data ? (
-        <section className="row" style={{ marginTop: "1rem" }}>
+      {token && productsQuery.data && productsQuery.data.totalPages > 1 ? (
+        <section className="row row-responsive" style={{ marginTop: "1rem" }}>
           <button
             className="secondary"
             type="button"

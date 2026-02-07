@@ -12,7 +12,7 @@ const updateProductSchema = z
     description: z.string().trim().min(1).optional(),
     priceCents: z.number().int().positive().optional(),
     category: z.string().trim().min(1).nullable().optional(),
-    imageUrl: z.string().trim().url().nullable().optional(),
+    imageUrl: z.string().trim().min(1).nullable().optional(),
     isAvailable: z.boolean().optional()
   })
   .refine((value) => Object.values(value).some((field) => field !== undefined), {
@@ -24,7 +24,7 @@ const createProductSchema = z.object({
   description: z.string().trim().min(1),
   priceCents: z.number().int().positive(),
   category: z.string().trim().min(1).nullable().optional(),
-  imageUrl: z.string().trim().url().nullable().optional(),
+  imageUrl: z.string().trim().min(1).nullable().optional(),
   isAvailable: z.boolean().optional()
 });
 

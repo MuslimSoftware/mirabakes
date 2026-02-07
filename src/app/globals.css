@@ -32,6 +32,8 @@ h3,
 h4,
 p {
   margin-top: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 a {
@@ -53,6 +55,14 @@ button {
   border-radius: 12px;
   background: var(--surface);
   padding: 1rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .product-image {
@@ -100,12 +110,15 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 input,
 select,
 textarea {
   width: 100%;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.55rem 0.7rem;
@@ -144,8 +157,12 @@ textarea {
   gap: 0.5rem;
 }
 
-.admin-checkbox input {
-  width: auto;
+.admin-checkbox input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  min-width: 1.1rem;
+  padding: 0;
+  cursor: pointer;
 }
 
 .admin-actions {
@@ -170,7 +187,45 @@ textarea {
   margin-top: 0.5rem;
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--border) 25%, #f5ece3 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
 @media (max-width: 760px) {
+  main {
+    padding: 1.25rem 0.75rem 3rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .card {
+    padding: 0.75rem;
+  }
+
+  .product-image {
+    height: 100px;
+  }
+
+  .row-responsive {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
   .admin-grid,
   .admin-filters,
   .admin-token {
@@ -180,5 +235,11 @@ textarea {
   .admin-field-wide,
   .admin-actions {
     grid-column: span 1;
+  }
+
+  .primary,
+  .secondary {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.9rem;
   }
 }
