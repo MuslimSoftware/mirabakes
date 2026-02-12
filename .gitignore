@@ -7,5 +7,6 @@ prisma/dev.db
 prisma/dev.db-journal
 *.tsbuildinfo
 ralph/
+markdowns/
 public/uploads/*
 !public/uploads/.gitkeep
