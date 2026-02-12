@@ -7,7 +7,7 @@ import { handleRouteError } from "@/server/shared/errors/http-error-handler";
 
 const createCheckoutSessionSchema = z.object({
   customerEmail: z.string().email().optional(),
-  customerPhone: z.string().trim().min(1),
+  customerPhone: z.string().trim().regex(/^\+1\d{10}$/, "Invalid US phone number"),
   items: z
     .array(
       z.object({

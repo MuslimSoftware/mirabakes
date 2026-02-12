@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 
 import { checkoutClient } from "@/frontend/api/clients/checkout.client";
 import { productsClient } from "@/frontend/api/clients/products.client";
-import { CartSummary } from "@/frontend/features/cart/cart-summary";
+import { CartSummary, extractDigits } from "@/frontend/features/cart/cart-summary";
 import { ProductCard } from "@/frontend/features/catalog/product-card";
 import { ProductCardSkeleton } from "@/frontend/features/catalog/product-card-skeleton";
 import { useApiPaginatedCached } from "@/frontend/hooks/useApiPaginatedCached";
@@ -28,7 +28,7 @@ export default function StorePage() {
         .filter(([, line]) => line.quantity > 0)
         .map(([productId, line]) => ({ productId, quantity: line.quantity }));
 
-      return checkoutClient.createSession({ items, customerPhone: phone.trim() });
+      return checkoutClient.createSession({ items, customerPhone: `+1${extractDigits(phone)}` });
     },
     onSuccess: (result) => {
       window.location.assign(result.checkoutUrl);
