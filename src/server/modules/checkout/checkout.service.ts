@@ -25,6 +25,7 @@ export class CheckoutService {
   async createStripeSession(input: {
     items: Array<{ productId: string; quantity: number }>;
     customerEmail?: string;
+    customerPhone: string;
     origin: string;
   }) {
     if (input.items.length < 1) {
@@ -69,6 +70,7 @@ export class CheckoutService {
       orderNumber,
       subtotalCents,
       customerEmail: input.customerEmail,
+      customerPhone: input.customerPhone,
       items: normalizedItems.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,

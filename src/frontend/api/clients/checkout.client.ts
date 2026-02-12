@@ -8,6 +8,7 @@ export type CheckoutLineItemInput = {
 export type CreateCheckoutSessionInput = {
   items: CheckoutLineItemInput[];
   customerEmail?: string;
+  customerPhone: string;
 };
 
 export type CreateCheckoutSessionResult = {

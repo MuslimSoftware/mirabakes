@@ -13,6 +13,7 @@ import { useApiPaginatedCached } from "@/frontend/hooks/useApiPaginatedCached";
 export default function StorePage() {
   const [page, setPage] = useState(1);
   const [cart, setCart] = useState<Record<string, { name: string; quantity: number; unitPriceCents: number }>>({});
+  const [phone, setPhone] = useState("");
 
   const productsQuery = useApiPaginatedCached({
     queryKey: ["products"],
@@ -27,7 +28,7 @@ export default function StorePage() {
         .filter(([, line]) => line.quantity > 0)
         .map(([productId, line]) => ({ productId, quantity: line.quantity }));
 
-      return checkoutClient.createSession({ items });
+      return checkoutClient.createSession({ items, customerPhone: phone.trim() });
     },
     onSuccess: (result) => {
       window.location.assign(result.checkoutUrl);
@@ -121,6 +122,8 @@ export default function StorePage() {
         subtotalCents={subtotalCents}
         loading={checkoutMutation.isPending}
         onCheckout={() => checkoutMutation.mutate()}
+        phone={phone}
+        onPhoneChange={setPhone}
       />
     </main>
   );

@@ -410,9 +410,7 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
   );
 }
 
-export function AdminProductsPanel() {
-  const [token, setToken] = useState("");
-  const [tokenDraft, setTokenDraft] = useState("");
+export function AdminProductsPanel({ token }: { token: string }) {
   const [showCreate, setShowCreate] = useState(false);
 
   const [query, setQuery] = useState("");
@@ -421,14 +419,6 @@ export function AdminProductsPanel() {
   const [page, setPage] = useState(1);
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const storedToken = window.localStorage.getItem("admin_api_token");
-    if (storedToken) {
-      setToken(storedToken);
-      setTokenDraft(storedToken);
-    }
-  }, []);
 
   const availabilityParam = useMemo(() => {
     if (availability === "available") {
@@ -471,17 +461,6 @@ export function AdminProductsPanel() {
     enabled: token.length > 0
   });
 
-  function applyToken() {
-    const next = tokenDraft.trim();
-    setToken(next);
-    setPage(1);
-    if (next) {
-      window.localStorage.setItem("admin_api_token", next);
-    } else {
-      window.localStorage.removeItem("admin_api_token");
-    }
-  }
-
   function refreshList() {
     queryClient.invalidateQueries({ queryKey: ["admin-products", token] });
   }
@@ -495,30 +474,8 @@ export function AdminProductsPanel() {
     productsQuery.error instanceof ApiClientError && productsQuery.error.status === 401;
 
   return (
-    <main>
-      <h1>Admin Products</h1>
-      <p className="muted">Manage catalog items, create new products, and delete old ones.</p>
-
-      {!token ? (
-        <section className="card" style={{ marginBottom: "1rem" }}>
-          <div className="admin-token">
-            <label className="admin-field admin-field-wide">
-              <span>Admin token</span>
-              <input
-                type="password"
-                value={tokenDraft}
-                onChange={(event) => setTokenDraft(event.target.value)}
-                placeholder="Paste ADMIN_API_TOKEN"
-              />
-            </label>
-            <button className="primary" type="button" onClick={applyToken}>
-              Unlock
-            </button>
-          </div>
-        </section>
-      ) : null}
-
-      {token && !showCreate ? (
+    <div>
+      {!showCreate ? (
         <div style={{ marginBottom: "1rem" }}>
           <button className="primary" type="button" onClick={() => setShowCreate(true)}>
             Create Product
@@ -526,57 +483,54 @@ export function AdminProductsPanel() {
         </div>
       ) : null}
 
-      {token && showCreate ? <CreateProductForm token={token} onCreated={handleCreated} /> : null}
+      {showCreate ? <CreateProductForm token={token} onCreated={handleCreated} /> : null}
 
-      {token ? (
-        <section className="card" style={{ marginBottom: "1rem" }}>
-          <div className="admin-filters">
-            <label className="admin-field">
-              <span>Search</span>
-              <input
-                value={query}
-                onChange={(event) => {
-                  setPage(1);
-                  setQuery(event.target.value);
-                }}
-                placeholder="Name or description"
-              />
-            </label>
+      <section className="card" style={{ marginBottom: "1rem" }}>
+        <div className="admin-filters">
+          <label className="admin-field">
+            <span>Search</span>
+            <input
+              value={query}
+              onChange={(event) => {
+                setPage(1);
+                setQuery(event.target.value);
+              }}
+              placeholder="Name or description"
+            />
+          </label>
 
-            <label className="admin-field">
-              <span>Category</span>
-              <input
-                value={category}
-                onChange={(event) => {
-                  setPage(1);
-                  setCategory(event.target.value);
-                }}
-                placeholder="cookies"
-              />
-            </label>
+          <label className="admin-field">
+            <span>Category</span>
+            <input
+              value={category}
+              onChange={(event) => {
+                setPage(1);
+                setCategory(event.target.value);
+              }}
+              placeholder="cookies"
+            />
+          </label>
 
-            <label className="admin-field">
-              <span>Availability</span>
-              <select
-                value={availability}
-                onChange={(event) => {
-                  setPage(1);
-                  setAvailability(event.target.value as "all" | "available" | "unavailable");
-                }}
-              >
-                <option value="all">All</option>
-                <option value="available">Available</option>
-                <option value="unavailable">Unavailable</option>
-              </select>
-            </label>
-          </div>
-        </section>
-      ) : null}
+          <label className="admin-field">
+            <span>Availability</span>
+            <select
+              value={availability}
+              onChange={(event) => {
+                setPage(1);
+                setAvailability(event.target.value as "all" | "available" | "unavailable");
+              }}
+            >
+              <option value="all">All</option>
+              <option value="available">Available</option>
+              <option value="unavailable">Unavailable</option>
+            </select>
+          </label>
+        </div>
+      </section>
 
-      {!token ? <p>Enter an admin token to view products.</p> : null}
-      {token && productsQuery.isLoading ? <p>Loading products...</p> : null}
-      {token && isUnauthorized ? <p className="admin-error">Invalid admin token.</p> : null}
-      {token && productsQuery.isError && !isUnauthorized ? (
+      {productsQuery.isLoading ? <p>Loading products...</p> : null}
+      {isUnauthorized ? <p className="admin-error">Invalid admin token.</p> : null}
+      {productsQuery.isError && !isUnauthorized ? (
         <p className="admin-error">Could not load admin products.</p>
       ) : null}
 
@@ -586,7 +540,7 @@ export function AdminProductsPanel() {
         ))}
       </section>
 
-      {token && productsQuery.data && productsQuery.data.totalPages > 1 ? (
+      {productsQuery.data && productsQuery.data.totalPages > 1 ? (
         <section className="row row-responsive" style={{ marginTop: "1rem" }}>
           <button
             className="secondary"
@@ -608,6 +562,6 @@ export function AdminProductsPanel() {
           </button>
         </section>
       ) : null}
-    </main>
+    </div>
   );
 }

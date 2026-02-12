@@ -39,6 +39,7 @@ model Order {
   status          OrderStatus @default(PENDING)
   subtotalCents   Int
   customerEmail   String?
+  customerPhone   String?
   stripeSessionId String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

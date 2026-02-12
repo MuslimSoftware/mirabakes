@@ -23,3 +23,21 @@ export type PublicOrder = {
   subtotalCents: number;
   createdAt: string;
 };
+
+export type AdminOrderItem = {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPriceCents: number;
+};
+
+export type AdminOrder = {
+  id: string;
+  orderNumber: string;
+  status: OrderStatus;
+  subtotalCents: number;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  items: AdminOrderItem[];
+  createdAt: string;
+};

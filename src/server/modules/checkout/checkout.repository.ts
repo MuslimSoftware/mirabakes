@@ -10,6 +10,7 @@ export class CheckoutRepository {
     orderNumber: string;
     subtotalCents: number;
     customerEmail?: string;
+    customerPhone?: string;
     items: Array<{ productId: string; quantity: number; unitPriceCents: number }>;
   }) {
     return ordersRepository.createPendingOrder(input);

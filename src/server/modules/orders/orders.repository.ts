@@ -12,6 +12,7 @@ export class OrdersRepository {
     orderNumber: string;
     subtotalCents: number;
     customerEmail?: string;
+    customerPhone?: string;
     items: Array<{ productId: string; quantity: number; unitPriceCents: number }>;
   }) {
     return prisma.order.create({
@@ -19,6 +20,7 @@ export class OrdersRepository {
         orderNumber: input.orderNumber,
         subtotalCents: input.subtotalCents,
         customerEmail: input.customerEmail,
+        customerPhone: input.customerPhone,
         status: OrderStatus.PENDING,
         items: {
           createMany: {
