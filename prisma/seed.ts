@@ -9,7 +9,7 @@ const seedProducts = [
     description: "Soft-centered cookies with dark and milk chocolate chips.",
     priceCents: 450,
     category: "cookies",
-    imageUrl: "https://picsum.photos/seed/chocolate-chip-cookies/1200/800",
+    imageUrl: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=1200&h=800&fit=crop&q=80",
     isAvailable: true
   },
   {
@@ -18,16 +18,7 @@ const seedProducts = [
     description: "Dense cocoa brownies with a crackly top.",
     priceCents: 500,
     category: "brownies",
-    imageUrl: "https://picsum.photos/seed/fudgy-brownie-squares/1200/800",
-    isAvailable: true
-  },
-  {
-    slug: "lemon-blueberry-loaf",
-    name: "Lemon Blueberry Loaf",
-    description: "Moist citrus loaf packed with blueberries.",
-    priceCents: 900,
-    category: "loaves",
-    imageUrl: "https://picsum.photos/seed/lemon-blueberry-loaf/1200/800",
+    imageUrl: "https://images.unsplash.com/photo-1643769377897-33ba0d88b240?w=1200&h=800&fit=crop&q=80",
     isAvailable: true
   },
   {
@@ -36,7 +27,7 @@ const seedProducts = [
     description: "Fluffy roll with brown sugar swirl and vanilla glaze.",
     priceCents: 550,
     category: "pastries",
-    imageUrl: "https://picsum.photos/seed/classic-cinnamon-roll/1200/800",
+    imageUrl: "https://plus.unsplash.com/premium_photo-1663928246542-ab54a1283646?w=1200&h=800&fit=crop&q=80",
     isAvailable: true
   },
   {
@@ -45,39 +36,14 @@ const seedProducts = [
     description: "Buttermilk red velvet cupcake with cream cheese frosting.",
     priceCents: 425,
     category: "cupcakes",
-    imageUrl: "https://picsum.photos/seed/red-velvet-cupcake/1200/800",
-    isAvailable: true
-  },
-  {
-    slug: "banana-walnut-muffin",
-    name: "Banana Walnut Muffin",
-    description: "Ripe banana muffin topped with toasted walnuts.",
-    priceCents: 375,
-    category: "muffins",
-    imageUrl: "https://picsum.photos/seed/banana-walnut-muffin/1200/800",
-    isAvailable: true
-  },
-  {
-    slug: "strawberry-shortcake-jar",
-    name: "Strawberry Shortcake Jar",
-    description: "Layered vanilla sponge, whipped cream, and strawberries.",
-    priceCents: 650,
-    category: "dessert-cups",
-    imageUrl: "https://picsum.photos/seed/strawberry-shortcake-jar/1200/800",
-    isAvailable: true
-  },
-  {
-    slug: "sourdough-country-loaf",
-    name: "Sourdough Country Loaf",
-    description: "Naturally leavened loaf with crisp crust and open crumb.",
-    priceCents: 1100,
-    category: "bread",
-    imageUrl: "https://picsum.photos/seed/sourdough-country-loaf/1200/800",
+    imageUrl: "https://images.unsplash.com/photo-1759524322472-3f146a43cf9a?w=1200&h=800&fit=crop&q=80",
     isAvailable: true
   }
 ] as const;
 
 async function main() {
+  await prisma.product.deleteMany();
+
   for (const product of seedProducts) {
     await prisma.product.upsert({
       where: { slug: product.slug },

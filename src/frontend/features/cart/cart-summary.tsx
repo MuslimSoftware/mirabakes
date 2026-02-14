@@ -48,8 +48,8 @@ export function CartSummary({
   }
 
   return (
-    <section className="card" style={{ marginTop: "1rem" }}>
-      <h3>Cart</h3>
+    <section className="cart-section">
+      <h3>Your Cart</h3>
 
       {totalItems === 0 ? (
         <p className="muted">Your cart is empty. Add items above to get started.</p>
@@ -57,7 +57,7 @@ export function CartSummary({
         <>
           <ul style={{ listStyle: "none", padding: 0, margin: "0.5rem 0" }}>
             {lines.map((line) => (
-              <li key={line.name} className="row" style={{ padding: "0.25rem 0" }}>
+              <li key={line.name} className="cart-line">
                 <span>
                   {line.name} &times; {line.quantity}
                 </span>
@@ -66,16 +66,18 @@ export function CartSummary({
             ))}
           </ul>
 
-          <div className="row" style={{ borderTop: "1px solid var(--border)", paddingTop: "0.5rem" }}>
+          <hr className="cart-divider" />
+
+          <div className="row">
             <span className="muted">{totalItems} item(s)</span>
-            <strong>${(subtotalCents / 100).toFixed(2)}</strong>
+            <strong style={{ fontSize: "1.1rem" }}>${(subtotalCents / 100).toFixed(2)}</strong>
           </div>
 
-          <div style={{ marginTop: "0.75rem", maxWidth: "50%" }}>
+          <div style={{ marginTop: "1rem", maxWidth: "50%" }}>
             <label style={{ display: "block" }}>
-              <span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Phone number <span style={{ color: "var(--error, #d32f2f)" }}>*</span></span>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
-                <span style={{ fontSize: "0.9rem", color: "var(--text-muted)", flexShrink: 0 }}>+1</span>
+              <span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Phone number <span style={{ color: "#d32f2f" }}>*</span></span>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.35rem" }}>
+                <span style={{ fontSize: "0.9rem", color: "var(--muted)", flexShrink: 0 }}>+1</span>
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -87,13 +89,13 @@ export function CartSummary({
                   aria-invalid={showError}
                   style={{
                     width: "100%",
-                    borderColor: showError ? "var(--error, #d32f2f)" : undefined
+                    borderColor: showError ? "#d32f2f" : undefined
                   }}
                 />
               </div>
             </label>
             {showError && (
-              <p style={{ color: "var(--error, #d32f2f)", fontSize: "0.8rem", margin: "0.25rem 0 0" }}>
+              <p style={{ color: "#d32f2f", fontSize: "0.8rem", margin: "0.25rem 0 0" }}>
                 Enter a valid 10-digit phone number.
               </p>
             )}
@@ -112,7 +114,7 @@ export function CartSummary({
         type="button"
         onClick={onCheckout}
         disabled={totalItems === 0 || !isValidPhone(phone) || loading}
-        style={{ width: "100%", marginTop: "0.75rem" }}
+        style={{ width: "100%", marginTop: "1rem", padding: "0.75rem" }}
       >
         {loading ? "Redirecting..." : "Checkout"}
       </button>

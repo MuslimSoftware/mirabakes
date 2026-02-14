@@ -19,13 +19,13 @@ export function ProductCard({
       <h3>{product.name}</h3>
       <p className="muted" style={{ flex: 1 }}>{product.description}</p>
       <div className="row">
-        <strong>${(product.priceCents / 100).toFixed(2)}</strong>
-        <div className="row" style={{ flexWrap: "nowrap" }}>
-          <button className="secondary" onClick={onRemove} disabled={quantity < 1} type="button">
-            -
+        <span className="product-price">${(product.priceCents / 100).toFixed(2)}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <button className="qty-btn" onClick={onRemove} disabled={quantity < 1} type="button">
+            &minus;
           </button>
-          <span>{quantity}</span>
-          <button className="secondary" onClick={onAdd} type="button">
+          <span className="qty-display">{quantity}</span>
+          <button className="qty-btn" onClick={onAdd} type="button">
             +
           </button>
         </div>

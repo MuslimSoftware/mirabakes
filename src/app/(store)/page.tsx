@@ -77,12 +77,19 @@ export default function StorePage() {
 
   return (
     <main>
-      <h1>Mira Bakes</h1>
-      <p className="muted">Fresh baked goods, simple ordering, secure checkout.</p>
+      <section className="hero">
+        <h1>Mira Bakes</h1>
+        <p className="subtitle">
+          Handcrafted baked goods made with love. Browse our selection, add to your cart, and checkout securely.
+        </p>
+        <p className="muted" style={{ fontSize: "0.9rem", marginTop: "0.5rem", fontWeight: 600 }}>
+          Saint-Paul, Minnesota, United States
+        </p>
+      </section>
 
       {productsQuery.isError ? <p>Could not load products.</p> : null}
 
-      <section className="card-grid" style={{ marginTop: "1rem" }}>
+      <section className="card-grid">
         {productsQuery.isLoading
           ? Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={i} />)
           : null}
@@ -98,7 +105,7 @@ export default function StorePage() {
       </section>
 
       {productsQuery.data && productsQuery.data.totalPages > 1 ? (
-        <section className="row row-responsive" style={{ marginTop: "1rem" }}>
+        <section className="pagination">
           <button className="secondary" type="button" onClick={() => setPage((p) => Math.max(1, p - 1))}>
             Previous
           </button>
@@ -125,6 +132,10 @@ export default function StorePage() {
         phone={phone}
         onPhoneChange={setPhone}
       />
+
+      <footer className="store-footer">
+        Mira Bakes &middot; Handcrafted with care
+      </footer>
     </main>
   );
 }
