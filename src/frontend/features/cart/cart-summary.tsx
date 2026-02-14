@@ -97,6 +97,12 @@ export function CartSummary({
                 Enter a valid 10-digit phone number.
               </p>
             )}
+            <p className="muted" style={{ fontSize: "0.8rem", margin: "0.5rem 0 0", lineHeight: 1.4 }}>
+              We'll text you to <strong>confirm your order</strong> and arrange delivery details.
+            </p>
+            <p className="muted" style={{ fontSize: "0.8rem", margin: "0.25rem 0 0", lineHeight: 1.4 }}>
+              <strong>Full refund</strong> within 7 days if your order can't be fulfilled.
+            </p>
           </div>
         </>
       )}
