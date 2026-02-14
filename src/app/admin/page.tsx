@@ -54,19 +54,32 @@ export default function AdminPage() {
       ) : (
         <>
           <div className="row" style={{ gap: "0.5rem", marginBottom: "1rem" }}>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                type="button"
+                className={activeTab === "products" ? "primary" : "secondary"}
+                onClick={() => setActiveTab("products")}
+              >
+                Products
+              </button>
+              <button
+                type="button"
+                className={activeTab === "orders" ? "primary" : "secondary"}
+                onClick={() => setActiveTab("orders")}
+              >
+                Orders
+              </button>
+            </div>
             <button
               type="button"
-              className={activeTab === "products" ? "primary" : "secondary"}
-              onClick={() => setActiveTab("products")}
+              className="secondary"
+              onClick={() => {
+                window.localStorage.removeItem("admin_api_token");
+                setToken("");
+                setTokenDraft("");
+              }}
             >
-              Products
-            </button>
-            <button
-              type="button"
-              className={activeTab === "orders" ? "primary" : "secondary"}
-              onClick={() => setActiveTab("orders")}
-            >
-              Orders
+              Logout
             </button>
           </div>
 

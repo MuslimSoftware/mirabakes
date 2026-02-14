@@ -13,12 +13,6 @@ import { ApiClientError } from "@/frontend/api/http/client";
 import { useApiPaginatedCached } from "@/frontend/hooks/useApiPaginatedCached";
 import type { Product } from "@/shared/types/domain";
 
-type ProductEditorProps = {
-  product: Product;
-  token: string;
-  onChanged: () => void;
-};
-
 type CreateProductFormProps = {
   token: string;
   onCreated: () => void;
@@ -128,8 +122,17 @@ function ImageUploadField({
   );
 }
 
-function ProductEditor({ product, token, onChanged }: ProductEditorProps) {
-  const [editing, setEditing] = useState(false);
+function EditProductForm({
+  product,
+  token,
+  onSaved,
+  onCancel
+}: {
+  product: Product;
+  token: string;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
   const [name, setName] = useState(product.name);
   const [description, setDescription] = useState(product.description);
   const [priceCents, setPriceCents] = useState(String(product.priceCents));
@@ -156,159 +159,59 @@ function ProductEditor({ product, token, onChanged }: ProductEditorProps) {
         imageUrl: imageUrl.trim() ? imageUrl.trim() : null,
         isAvailable
       };
-
       return adminProductsClient.update(product.id, payload, token);
     },
-    onSuccess: () => {
-      setEditing(false);
-      onChanged();
-    }
+    onSuccess: onSaved
   });
-
-  const deleteMutation = useMutation({
-    mutationFn: async () => adminProductsClient.remove(product.id, token),
-    onSuccess: onChanged
-  });
-
-  function handleDelete() {
-    if (!window.confirm(`Delete ${product.name}? This cannot be undone.`)) {
-      return;
-    }
-
-    deleteMutation.mutate();
-  }
-
-  function handleCancel() {
-    setName(product.name);
-    setDescription(product.description);
-    setPriceCents(String(product.priceCents));
-    setCategory(product.category ?? "");
-    setImageUrl(product.imageUrl ?? "");
-    setIsAvailable(product.isAvailable);
-    setEditing(false);
-  }
-
-  const mutationError = updateMutation.error ?? deleteMutation.error;
-  const busy = updateMutation.isPending || deleteMutation.isPending;
-
-  if (!editing) {
-    return (
-      <article className="card">
-        <div className="row" style={{ marginBottom: "0.5rem" }}>
-          <h4 style={{ margin: 0, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{product.name}</h4>
-          <div className="row" style={{ gap: "0.25rem", flexWrap: "nowrap", flexShrink: 0 }}>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => setEditing(true)}
-              title="Edit"
-              style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
-            >
-              &#9998;
-            </button>
-            <button
-              type="button"
-              className="secondary danger"
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              title="Delete"
-              style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
-            >
-              {deleteMutation.isPending ? "..." : "\u2715"}
-            </button>
-          </div>
-        </div>
-        <p className="muted" style={{ fontSize: "0.9rem", marginBottom: "0.25rem" }}>
-          {product.description}
-        </p>
-        <div className="row">
-          <strong>${(product.priceCents / 100).toFixed(2)}</strong>
-          <small className="muted">{product.category ?? "uncategorized"}</small>
-          <small className={product.isAvailable ? "" : "muted"}>
-            {product.isAvailable ? "Available" : "Unavailable"}
-          </small>
-        </div>
-        {mutationError ? (
-          <p className="admin-error">
-            {(mutationError as ApiClientError)?.message ?? "Failed"}
-          </p>
-        ) : null}
-      </article>
-    );
-  }
 
   return (
-    <article className="card">
+    <section className="card" style={{ marginBottom: "1rem" }}>
+      <h3 style={{ marginBottom: "0.5rem" }}>Edit: {product.name}</h3>
       <div className="admin-grid">
         <label className="admin-field">
           <span>Name</span>
-          <input value={name} onChange={(event) => setName(event.target.value)} />
+          <input value={name} onChange={(e) => setName(e.target.value)} />
         </label>
-
         <label className="admin-field">
           <span>Price (cents)</span>
-          <input
-            type="number"
-            min={1}
-            value={priceCents}
-            onChange={(event) => setPriceCents(event.target.value)}
-          />
+          <input type="number" min={1} value={priceCents} onChange={(e) => setPriceCents(e.target.value)} />
         </label>
-
         <label className="admin-field admin-field-wide">
           <span>Description</span>
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={3}
-          />
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
         </label>
-
         <label className="admin-field">
           <span>Category</span>
-          <input value={category} onChange={(event) => setCategory(event.target.value)} />
+          <input value={category} onChange={(e) => setCategory(e.target.value)} />
         </label>
-
         <ImageUploadField imageUrl={imageUrl} onImageUrlChange={setImageUrl} token={token} />
-
         <label className="admin-checkbox">
-          <input
-            type="checkbox"
-            checked={isAvailable}
-            onChange={(event) => setIsAvailable(event.target.checked)}
-          />
+          <input type="checkbox" checked={isAvailable} onChange={(e) => setIsAvailable(e.target.checked)} />
           <span>Available</span>
         </label>
-
         <div className="row admin-actions">
           <small className="muted">{product.slug}</small>
           <div className="row">
-            <button
-              type="button"
-              className="secondary"
-              onClick={handleCancel}
-              disabled={busy}
-            >
+            <button type="button" className="secondary" onClick={onCancel} disabled={updateMutation.isPending}>
               Cancel
             </button>
             <button
               type="button"
               className="primary"
               onClick={() => updateMutation.mutate()}
-              disabled={busy}
+              disabled={updateMutation.isPending}
             >
               {updateMutation.isPending ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
       </div>
-
-      {mutationError ? (
+      {updateMutation.isError ? (
         <p className="admin-error">
-          {(mutationError as ApiClientError)?.message ?? "Failed to update product"}
+          {(updateMutation.error as ApiClientError)?.message ?? "Failed to update product"}
         </p>
       ) : null}
-    </article>
+    </section>
   );
 }
 
@@ -321,7 +224,6 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
       if (!payload.name || !payload.description) {
         throw new Error("Name and description are required");
       }
-
       return adminProductsClient.create(payload, token);
     },
     onSuccess: () => {
@@ -331,10 +233,7 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
   });
 
   function setField<K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) {
-    setDraft((previous) => ({
-      ...previous,
-      [key]: value
-    }));
+    setDraft((previous) => ({ ...previous, [key]: value }));
   }
 
   return (
@@ -343,51 +242,25 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
       <div className="admin-grid">
         <label className="admin-field">
           <span>Name</span>
-          <input value={draft.name} onChange={(event) => setField("name", event.target.value)} />
+          <input value={draft.name} onChange={(e) => setField("name", e.target.value)} />
         </label>
-
         <label className="admin-field">
           <span>Price (cents)</span>
-          <input
-            type="number"
-            min={1}
-            value={draft.priceCents}
-            onChange={(event) => setField("priceCents", event.target.value)}
-          />
+          <input type="number" min={1} value={draft.priceCents} onChange={(e) => setField("priceCents", e.target.value)} />
         </label>
-
         <label className="admin-field admin-field-wide">
           <span>Description</span>
-          <textarea
-            value={draft.description}
-            onChange={(event) => setField("description", event.target.value)}
-            rows={3}
-          />
+          <textarea value={draft.description} onChange={(e) => setField("description", e.target.value)} rows={3} />
         </label>
-
         <label className="admin-field">
           <span>Category</span>
-          <input
-            value={draft.category}
-            onChange={(event) => setField("category", event.target.value)}
-          />
+          <input value={draft.category} onChange={(e) => setField("category", e.target.value)} />
         </label>
-
-        <ImageUploadField
-          imageUrl={draft.imageUrl}
-          onImageUrlChange={(url) => setField("imageUrl", url)}
-          token={token}
-        />
-
+        <ImageUploadField imageUrl={draft.imageUrl} onImageUrlChange={(url) => setField("imageUrl", url)} token={token} />
         <label className="admin-checkbox">
-          <input
-            type="checkbox"
-            checked={draft.isAvailable}
-            onChange={(event) => setField("isAvailable", event.target.checked)}
-          />
+          <input type="checkbox" checked={draft.isAvailable} onChange={(e) => setField("isAvailable", e.target.checked)} />
           <span>Available</span>
         </label>
-
         <div className="row admin-actions">
           <small className="muted">Slug is generated automatically from name</small>
           <button
@@ -400,7 +273,6 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
           </button>
         </div>
       </div>
-
       {createMutation.isError ? (
         <p className="admin-error">
           {(createMutation.error as ApiClientError)?.message ?? "Failed to create product"}
@@ -412,7 +284,7 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
 
 export function AdminProductsPanel({ token }: { token: string }) {
   const [showCreate, setShowCreate] = useState(false);
-
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [availability, setAvailability] = useState<"all" | "available" | "unavailable">("all");
@@ -421,12 +293,8 @@ export function AdminProductsPanel({ token }: { token: string }) {
   const queryClient = useQueryClient();
 
   const availabilityParam = useMemo(() => {
-    if (availability === "available") {
-      return true;
-    }
-    if (availability === "unavailable") {
-      return false;
-    }
+    if (availability === "available") return true;
+    if (availability === "unavailable") return false;
     return undefined;
   }, [availability]);
 
@@ -446,19 +314,18 @@ export function AdminProductsPanel({ token }: { token: string }) {
     queryKey: ["admin-products", token],
     queryFn: (input) =>
       adminProductsClient.list(
-        {
-          page: input.page,
-          pageSize: input.pageSize,
-          q: input.q,
-          category: input.category,
-          isAvailable: input.isAvailable
-        },
+        { page: input.page, pageSize: input.pageSize, q: input.q, category: input.category, isAvailable: input.isAvailable },
         token
       ),
     params: listParams,
     page,
     pageSize: 12,
     enabled: token.length > 0
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => adminProductsClient.remove(id, token),
+    onSuccess: refreshList
   });
 
   function refreshList() {
@@ -469,6 +336,20 @@ export function AdminProductsPanel({ token }: { token: string }) {
     setShowCreate(false);
     refreshList();
   }
+
+  function handleEditSaved() {
+    setEditingProductId(null);
+    refreshList();
+  }
+
+  function handleDelete(product: Product) {
+    if (!window.confirm(`Delete ${product.name}? This cannot be undone.`)) return;
+    deleteMutation.mutate(product.id);
+  }
+
+  const editingProduct = editingProductId
+    ? productsQuery.data?.items.find((p) => p.id === editingProductId)
+    : null;
 
   const isUnauthorized =
     productsQuery.error instanceof ApiClientError && productsQuery.error.status === 401;
@@ -485,40 +366,38 @@ export function AdminProductsPanel({ token }: { token: string }) {
 
       {showCreate ? <CreateProductForm token={token} onCreated={handleCreated} /> : null}
 
+      {editingProduct ? (
+        <EditProductForm
+          product={editingProduct}
+          token={token}
+          onSaved={handleEditSaved}
+          onCancel={() => setEditingProductId(null)}
+        />
+      ) : null}
+
       <section className="card" style={{ marginBottom: "1rem" }}>
         <div className="admin-filters">
           <label className="admin-field">
             <span>Search</span>
             <input
               value={query}
-              onChange={(event) => {
-                setPage(1);
-                setQuery(event.target.value);
-              }}
+              onChange={(e) => { setPage(1); setQuery(e.target.value); }}
               placeholder="Name or description"
             />
           </label>
-
           <label className="admin-field">
             <span>Category</span>
             <input
               value={category}
-              onChange={(event) => {
-                setPage(1);
-                setCategory(event.target.value);
-              }}
+              onChange={(e) => { setPage(1); setCategory(e.target.value); }}
               placeholder="cookies"
             />
           </label>
-
           <label className="admin-field">
             <span>Availability</span>
             <select
               value={availability}
-              onChange={(event) => {
-                setPage(1);
-                setAvailability(event.target.value as "all" | "available" | "unavailable");
-              }}
+              onChange={(e) => { setPage(1); setAvailability(e.target.value as "all" | "available" | "unavailable"); }}
             >
               <option value="all">All</option>
               <option value="available">Available</option>
@@ -534,18 +413,82 @@ export function AdminProductsPanel({ token }: { token: string }) {
         <p className="admin-error">Could not load admin products.</p>
       ) : null}
 
-      <section className="card-grid">
-        {productsQuery.data?.items.map((product) => (
-          <ProductEditor key={product.id} product={product} token={token} onChanged={refreshList} />
-        ))}
-      </section>
+      {productsQuery.data && productsQuery.data.items.length > 0 ? (
+        <div className="admin-table-wrap card">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th style={{ width: 60 }}>Image</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th className="text-right">Price</th>
+                <th>Status</th>
+                <th style={{ width: 90 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {productsQuery.data.items.map((product) => (
+                <tr
+                  key={product.id}
+                  style={editingProductId === product.id ? { background: "rgba(199,109,58,0.06)" } : undefined}
+                >
+                  <td>
+                    {product.imageUrl ? (
+                      <img className="thumb" src={product.imageUrl} alt={product.name} />
+                    ) : (
+                      <div className="thumb-placeholder" />
+                    )}
+                  </td>
+                  <td><strong>{product.name}</strong></td>
+                  <td className="muted">{product.category ?? "—"}</td>
+                  <td className="text-right">${(product.priceCents / 100).toFixed(2)}</td>
+                  <td>
+                    <span className={`badge ${product.isAvailable ? "badge-available" : "badge-unavailable"}`}>
+                      {product.isAvailable ? "Available" : "Unavailable"}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", gap: "0.25rem" }}>
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => setEditingProductId(product.id)}
+                        title="Edit"
+                        style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
+                      >
+                        &#9998;
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary danger"
+                        onClick={() => handleDelete(product)}
+                        disabled={deleteMutation.isPending}
+                        title="Delete"
+                        style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
+                      >
+                        {deleteMutation.isPending ? "..." : "\u2715"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {deleteMutation.isError ? (
+        <p className="admin-error">
+          {(deleteMutation.error as ApiClientError)?.message ?? "Failed to delete product"}
+        </p>
+      ) : null}
 
       {productsQuery.data && productsQuery.data.totalPages > 1 ? (
         <section className="row row-responsive" style={{ marginTop: "1rem" }}>
           <button
             className="secondary"
             type="button"
-            onClick={() => setPage((previous) => Math.max(1, previous - 1))}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
             Previous
           </button>
@@ -555,7 +498,7 @@ export function AdminProductsPanel({ token }: { token: string }) {
           <button
             className="secondary"
             type="button"
-            onClick={() => setPage((previous) => previous + 1)}
+            onClick={() => setPage((p) => p + 1)}
             disabled={productsQuery.data.page >= productsQuery.data.totalPages}
           >
             Next

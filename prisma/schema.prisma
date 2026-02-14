@@ -12,11 +12,13 @@ enum OrderStatus {
   PAID
   FAILED
   CANCELLED
+  REFUNDED
 }
 
 enum PaymentStatus {
   SUCCEEDED
   FAILED
+  REFUNDED
 }
 
 model Product {
@@ -40,11 +42,14 @@ model Order {
   subtotalCents   Int
   customerEmail   String?
   customerPhone   String?
-  stripeSessionId String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  items           OrderItem[]
-  payments        Payment[]
+  stripeSessionId  String?
+  refundAmountCents Int?
+  refundedAt       DateTime?
+  cancelledAt      DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  items            OrderItem[]
+  payments         Payment[]
 }
 
 model OrderItem {

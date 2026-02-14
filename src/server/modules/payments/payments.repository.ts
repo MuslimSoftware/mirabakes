@@ -46,6 +46,27 @@ export class PaymentsRepository {
       }
     });
   }
+
+  async findSucceededByOrderId(orderId: string) {
+    return prisma.payment.findFirst({
+      where: {
+        orderId,
+        status: PaymentStatus.SUCCEEDED
+      }
+    });
+  }
+
+  async createRefunded(input: { orderId: string; externalId: string; amountCents: number }) {
+    return prisma.payment.create({
+      data: {
+        orderId: input.orderId,
+        provider: "stripe",
+        externalId: input.externalId,
+        amountCents: input.amountCents,
+        status: PaymentStatus.REFUNDED
+      }
+    });
+  }
 }
 
 export const paymentsRepository = new PaymentsRepository();

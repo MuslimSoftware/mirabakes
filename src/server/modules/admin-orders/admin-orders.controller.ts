@@ -32,6 +32,43 @@ export class AdminOrdersController {
       return handleRouteError(error);
     }
   }
+
+  async getById(request: Request, id: string) {
+    try {
+      assertAdminRequest(request);
+      const data = await adminOrdersService.getById(id);
+      return NextResponse.json({ data });
+    } catch (error) {
+      return handleRouteError(error);
+    }
+  }
+
+  async cancel(request: Request, id: string) {
+    try {
+      assertAdminRequest(request);
+      const data = await adminOrdersService.cancelOrder(id);
+      return NextResponse.json({ data });
+    } catch (error) {
+      return handleRouteError(error);
+    }
+  }
+
+  async refund(request: Request, id: string) {
+    try {
+      assertAdminRequest(request);
+
+      const body = (await request.json().catch(() => ({}))) as { amountCents?: unknown };
+      const amountCents =
+        typeof body.amountCents === "number" && Number.isFinite(body.amountCents)
+          ? Math.round(body.amountCents)
+          : undefined;
+
+      const data = await adminOrdersService.refundOrder(id, amountCents);
+      return NextResponse.json({ data });
+    } catch (error) {
+      return handleRouteError(error);
+    }
+  }
 }
 
 export const adminOrdersController = new AdminOrdersController();

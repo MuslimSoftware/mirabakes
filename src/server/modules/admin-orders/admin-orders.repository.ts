@@ -8,6 +8,15 @@ type ListAdminOrdersInput = {
   status?: OrderStatus;
 };
 
+const orderInclude = {
+  items: {
+    include: {
+      product: { select: { name: true } }
+    }
+  },
+  payments: true
+} as const;
+
 export class AdminOrdersRepository {
   async findAll(input: ListAdminOrdersInput) {
     const skip = (input.page - 1) * input.pageSize;
@@ -19,18 +28,35 @@ export class AdminOrdersRepository {
         skip,
         take: input.pageSize,
         orderBy: { createdAt: "desc" },
-        include: {
-          items: {
-            include: {
-              product: { select: { name: true } }
-            }
-          }
-        }
+        include: orderInclude
       }),
       prisma.order.count({ where })
     ]);
 
     return { items, total };
+  }
+
+  async findById(id: string) {
+    return prisma.order.findUnique({
+      where: { id },
+      include: orderInclude
+    });
+  }
+
+  async updateStatus(
+    id: string,
+    data: {
+      status: OrderStatus;
+      refundAmountCents?: number;
+      refundedAt?: Date;
+      cancelledAt?: Date;
+    }
+  ) {
+    return prisma.order.update({
+      where: { id },
+      data,
+      include: orderInclude
+    });
   }
 }
 

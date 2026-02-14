@@ -9,7 +9,7 @@ export type Product = {
   category: string | null;
 };
 
-export type OrderStatus = "pending" | "paid" | "failed" | "cancelled";
+export type OrderStatus = "pending" | "paid" | "failed" | "cancelled" | "refunded";
 
 export type OrderItem = {
   productId: string;
@@ -31,6 +31,15 @@ export type AdminOrderItem = {
   unitPriceCents: number;
 };
 
+export type AdminPayment = {
+  id: string;
+  provider: string;
+  externalId: string;
+  status: string;
+  amountCents: number;
+  createdAt: string;
+};
+
 export type AdminOrder = {
   id: string;
   orderNumber: string;
@@ -39,5 +48,9 @@ export type AdminOrder = {
   customerEmail: string | null;
   customerPhone: string | null;
   items: AdminOrderItem[];
+  payments: AdminPayment[];
+  refundAmountCents: number | null;
+  refundedAt: string | null;
+  cancelledAt: string | null;
   createdAt: string;
 };

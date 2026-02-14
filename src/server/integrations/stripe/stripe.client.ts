@@ -18,6 +18,18 @@ export function getStripeClient() {
   return stripeClient;
 }
 
+export async function createStripeRefund(input: {
+  paymentIntentId: string;
+  amountCents?: number;
+}) {
+  const stripe = getStripeClient();
+
+  return stripe.refunds.create({
+    payment_intent: input.paymentIntentId,
+    ...(input.amountCents ? { amount: input.amountCents } : {})
+  });
+}
+
 export async function createStripeCheckoutSession(input: {
   lineItems: Array<{ name: string; description?: string; unitAmount: number; quantity: number }>;
   customerEmail?: string;

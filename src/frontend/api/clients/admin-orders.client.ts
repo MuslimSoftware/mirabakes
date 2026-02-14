@@ -25,5 +25,27 @@ export const adminOrdersClient = {
       },
       headers: adminHeaders(token)
     });
+  },
+
+  getById(id: string, token: string) {
+    return apiRequest<AdminOrder>(`/api/v1/admin/orders/${id}`, {
+      method: "GET",
+      headers: adminHeaders(token)
+    });
+  },
+
+  cancel(id: string, token: string) {
+    return apiRequest<AdminOrder>(`/api/v1/admin/orders/${id}/cancel`, {
+      method: "POST",
+      headers: adminHeaders(token)
+    });
+  },
+
+  refund(id: string, body: { amountCents?: number }, token: string) {
+    return apiRequest<AdminOrder>(`/api/v1/admin/orders/${id}/refund`, {
+      method: "POST",
+      body,
+      headers: adminHeaders(token)
+    });
   }
 };
