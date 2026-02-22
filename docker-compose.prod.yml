@@ -31,8 +31,8 @@ services:
       STRIPE_CANCEL_URL: ${STRIPE_CANCEL_URL:-https://mirabakes.com}
       ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:?ADMIN_API_TOKEN is required}
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     volumes:
       - uploads_data:/app/public/uploads
 
