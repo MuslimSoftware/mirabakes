@@ -3,16 +3,20 @@ import Stripe from "stripe";
 import { AppError } from "@/server/shared/errors/app-error";
 
 let stripeClient: Stripe | null = null;
+const DEFAULT_STRIPE_API_VERSION = "2026-01-28.clover";
 
 export function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
+  const apiVersion = process.env.STRIPE_API_VERSION ?? DEFAULT_STRIPE_API_VERSION;
 
   if (!secretKey) {
     throw new AppError("Missing STRIPE_SECRET_KEY", 500, "stripe_not_configured");
   }
 
   if (!stripeClient) {
-    stripeClient = new Stripe(secretKey);
+    stripeClient = new Stripe(secretKey, {
+      apiVersion: apiVersion as Stripe.StripeConfig["apiVersion"]
+    });
   }
 
   return stripeClient;

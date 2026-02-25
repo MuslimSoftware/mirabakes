@@ -25,6 +25,7 @@ services:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres?schema=public
       NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-https://mirabakes.com}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_API_VERSION: ${STRIPE_API_VERSION:-2026-01-28.clover}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       STRIPE_SUCCESS_URL_TEMPLATE: ${STRIPE_SUCCESS_URL_TEMPLATE:-https://mirabakes.com/order/{ORDER_NUMBER}}
       STRIPE_CANCEL_URL: ${STRIPE_CANCEL_URL:-https://mirabakes.com}
