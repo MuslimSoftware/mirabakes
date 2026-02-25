@@ -20,6 +20,7 @@ export function OrderStatusView({ orderNumber }: { orderNumber: string }) {
   return (
     <section className="card">
       <h1>Order {data.orderNumber}</h1>
+      <p className="muted">Bookmark or save this page to check your order status later.</p>
       <p>
         Status: <strong>{data.status.toUpperCase()}</strong>
       </p>
