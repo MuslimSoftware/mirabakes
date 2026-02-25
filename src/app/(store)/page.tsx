@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 
 import { checkoutClient } from "@/frontend/api/clients/checkout.client";
@@ -14,6 +14,27 @@ export default function StorePage() {
   const [page, setPage] = useState(1);
   const [cart, setCart] = useState<Record<string, { name: string; quantity: number; unitPriceCents: number }>>({});
   const [phone, setPhone] = useState("");
+  const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null);
+
+  useEffect(() => {
+    if (!selectedImage) {
+      return;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setSelectedImage(null);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [selectedImage]);
 
   const productsQuery = useApiPaginatedCached({
     queryKey: ["products"],
@@ -93,15 +114,20 @@ export default function StorePage() {
         {productsQuery.isLoading
           ? Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={i} />)
           : null}
-        {productsQuery.data?.items.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            quantity={cart[product.id]?.quantity ?? 0}
-            onAdd={() => addToCart(product.id, product.name, product.priceCents)}
-            onRemove={() => removeFromCart(product.id)}
-          />
-        ))}
+        {productsQuery.data?.items.map((product) => {
+          const imageUrl = product.imageUrl;
+
+          return (
+            <ProductCard
+              key={product.id}
+              product={product}
+              quantity={cart[product.id]?.quantity ?? 0}
+              onAdd={() => addToCart(product.id, product.name, product.priceCents)}
+              onRemove={() => removeFromCart(product.id)}
+              onImageClick={imageUrl ? () => setSelectedImage({ url: imageUrl, alt: product.name }) : undefined}
+            />
+          );
+        })}
       </section>
 
       {productsQuery.data && productsQuery.data.totalPages > 1 ? (
@@ -136,6 +162,31 @@ export default function StorePage() {
       <footer className="store-footer">
         Mira Bakes &middot; Handcrafted with care
       </footer>
+
+      {selectedImage ? (
+        <div
+          className="image-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Product image: ${selectedImage.alt}`}
+          onClick={() => setSelectedImage(null)}
+        >
+          <button
+            className="image-modal-close"
+            type="button"
+            aria-label="Close image preview"
+            onClick={() => setSelectedImage(null)}
+          >
+            &times;
+          </button>
+          <img
+            className="image-modal-image"
+            src={selectedImage.url}
+            alt={selectedImage.alt}
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      ) : null}
     </main>
   );
 }

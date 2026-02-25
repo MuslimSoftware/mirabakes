@@ -4,19 +4,32 @@ export function ProductCard({
   product,
   quantity,
   onAdd,
-  onRemove
+  onRemove,
+  onImageClick
 }: {
   product: Product;
   quantity: number;
   onAdd: () => void;
   onRemove: () => void;
+  onImageClick?: () => void;
 }) {
   const hasDetails = Boolean(product.amount || product.size || product.calories);
 
   return (
     <article className="card product-card">
       {product.imageUrl ? (
-        <img className="product-image" src={product.imageUrl} alt={product.name} loading="lazy" />
+        onImageClick ? (
+          <button
+            className="product-image-button"
+            type="button"
+            onClick={onImageClick}
+            aria-label={`Open full image for ${product.name}`}
+          >
+            <img className="product-image" src={product.imageUrl} alt={product.name} loading="lazy" />
+          </button>
+        ) : (
+          <img className="product-image" src={product.imageUrl} alt={product.name} loading="lazy" />
+        )
       ) : null}
       <h3>{product.name}</h3>
       {hasDetails ? (
