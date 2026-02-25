@@ -14,6 +14,9 @@ export type AdminUpdateProductInput = {
   name?: string;
   description?: string;
   priceCents?: number;
+  amount?: string | null;
+  size?: string | null;
+  calories?: number | null;
   category?: string | null;
   imageUrl?: string | null;
   isAvailable?: boolean;
@@ -23,6 +26,9 @@ export type AdminCreateProductInput = {
   name: string;
   description: string;
   priceCents: number;
+  amount?: string | null;
+  size?: string | null;
+  calories?: number | null;
   category?: string | null;
   imageUrl?: string | null;
   isAvailable?: boolean;

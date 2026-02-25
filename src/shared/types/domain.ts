@@ -4,6 +4,9 @@ export type Product = {
   name: string;
   description: string;
   priceCents: number;
+  amount: string | null;
+  size: string | null;
+  calories: number | null;
   imageUrl: string | null;
   isAvailable: boolean;
   category: string | null;

@@ -27,6 +27,9 @@ model Product {
   name        String
   description String
   priceCents  Int
+  amount      String?
+  size        String?
+  calories    Int?
   imageUrl    String?
   isAvailable Boolean     @default(true)
   category    String?

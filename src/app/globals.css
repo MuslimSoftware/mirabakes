@@ -189,6 +189,23 @@ button {
   line-height: 1.5;
 }
 
+.product-details {
+  display: grid;
+  gap: 0.2rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.product-details p {
+  margin: 0;
+}
+
+.product-details strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .product-price {
   font-size: 1.05rem;
   font-weight: 600;

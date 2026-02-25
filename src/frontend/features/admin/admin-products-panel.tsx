@@ -22,6 +22,9 @@ type ProductDraft = {
   name: string;
   description: string;
   priceCents: string;
+  amount: string;
+  size: string;
+  calories: string;
   category: string;
   imageUrl: string;
   isAvailable: boolean;
@@ -31,6 +34,9 @@ const emptyCreateDraft: ProductDraft = {
   name: "",
   description: "",
   priceCents: "",
+  amount: "",
+  size: "",
+  calories: "",
   category: "",
   imageUrl: "",
   isAvailable: true
@@ -45,13 +51,35 @@ function parsePriceCents(value: string): number {
   return numeric;
 }
 
+function normalizeOptionalText(value: string): string | null {
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function parseOptionalCalories(value: string): number | null {
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const numeric = Number(normalized);
+  if (!Number.isInteger(numeric) || numeric < 1) {
+    throw new Error("Calories must be a positive integer");
+  }
+
+  return numeric;
+}
+
 function normalizeProductPayload(draft: ProductDraft): AdminCreateProductInput {
   return {
     name: draft.name.trim(),
     description: draft.description.trim(),
     priceCents: parsePriceCents(draft.priceCents),
-    category: draft.category.trim() ? draft.category.trim() : null,
-    imageUrl: draft.imageUrl.trim() ? draft.imageUrl.trim() : null,
+    amount: normalizeOptionalText(draft.amount),
+    size: normalizeOptionalText(draft.size),
+    calories: parseOptionalCalories(draft.calories),
+    category: normalizeOptionalText(draft.category),
+    imageUrl: normalizeOptionalText(draft.imageUrl),
     isAvailable: draft.isAvailable
   };
 }
@@ -160,6 +188,9 @@ function EditProductForm({
   const [name, setName] = useState(product.name);
   const [description, setDescription] = useState(product.description);
   const [priceCents, setPriceCents] = useState(String(product.priceCents));
+  const [amount, setAmount] = useState(product.amount ?? "");
+  const [size, setSize] = useState(product.size ?? "");
+  const [calories, setCalories] = useState(product.calories ? String(product.calories) : "");
   const [category, setCategory] = useState(product.category ?? "");
   const [imageUrl, setImageUrl] = useState(product.imageUrl ?? "");
   const [isImageUploading, setIsImageUploading] = useState(false);
@@ -169,6 +200,9 @@ function EditProductForm({
     setName(product.name);
     setDescription(product.description);
     setPriceCents(String(product.priceCents));
+    setAmount(product.amount ?? "");
+    setSize(product.size ?? "");
+    setCalories(product.calories ? String(product.calories) : "");
     setCategory(product.category ?? "");
     setImageUrl(product.imageUrl ?? "");
     setIsImageUploading(false);
@@ -181,8 +215,11 @@ function EditProductForm({
         name: name.trim(),
         description: description.trim(),
         priceCents: parsePriceCents(priceCents),
-        category: category.trim() ? category.trim() : null,
-        imageUrl: imageUrl.trim() ? imageUrl.trim() : null,
+        amount: normalizeOptionalText(amount),
+        size: normalizeOptionalText(size),
+        calories: parseOptionalCalories(calories),
+        category: normalizeOptionalText(category),
+        imageUrl: normalizeOptionalText(imageUrl),
         isAvailable
       };
       return adminProductsClient.update(product.id, payload, token);
@@ -201,6 +238,18 @@ function EditProductForm({
         <label className="admin-field">
           <span>Price (cents)</span>
           <input type="number" min={1} value={priceCents} onChange={(e) => setPriceCents(e.target.value)} />
+        </label>
+        <label className="admin-field">
+          <span>Amount (optional)</span>
+          <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="12 pieces" />
+        </label>
+        <label className="admin-field">
+          <span>Size (optional)</span>
+          <input value={size} onChange={(e) => setSize(e.target.value)} placeholder="8-inch (serves 10)" />
+        </label>
+        <label className="admin-field">
+          <span>Calories (optional)</span>
+          <input type="number" min={1} value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="320" />
         </label>
         <label className="admin-field admin-field-wide">
           <span>Description</span>
@@ -281,6 +330,24 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
         <label className="admin-field">
           <span>Price (cents)</span>
           <input type="number" min={1} value={draft.priceCents} onChange={(e) => setField("priceCents", e.target.value)} />
+        </label>
+        <label className="admin-field">
+          <span>Amount (optional)</span>
+          <input value={draft.amount} onChange={(e) => setField("amount", e.target.value)} placeholder="12 pieces" />
+        </label>
+        <label className="admin-field">
+          <span>Size (optional)</span>
+          <input value={draft.size} onChange={(e) => setField("size", e.target.value)} placeholder="8-inch (serves 10)" />
+        </label>
+        <label className="admin-field">
+          <span>Calories (optional)</span>
+          <input
+            type="number"
+            min={1}
+            value={draft.calories}
+            onChange={(e) => setField("calories", e.target.value)}
+            placeholder="320"
+          />
         </label>
         <label className="admin-field admin-field-wide">
           <span>Description</span>

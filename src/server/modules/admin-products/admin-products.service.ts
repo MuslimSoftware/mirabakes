@@ -6,6 +6,9 @@ type AdminProductCreateInput = {
   name: string;
   description: string;
   priceCents: number;
+  amount?: string | null;
+  size?: string | null;
+  calories?: number | null;
   category?: string | null;
   imageUrl?: string | null;
   isAvailable?: boolean;
@@ -15,6 +18,9 @@ type AdminProductUpdateInput = {
   name?: string;
   description?: string;
   priceCents?: number;
+  amount?: string | null;
+  size?: string | null;
+  calories?: number | null;
   category?: string | null;
   imageUrl?: string | null;
   isAvailable?: boolean;
@@ -78,6 +84,9 @@ export class AdminProductsService {
       name: input.name,
       description: input.description,
       priceCents: input.priceCents,
+      amount: input.amount ?? null,
+      size: input.size ?? null,
+      calories: input.calories ?? null,
       category: input.category ?? null,
       imageUrl: input.imageUrl ?? null,
       isAvailable: input.isAvailable ?? true

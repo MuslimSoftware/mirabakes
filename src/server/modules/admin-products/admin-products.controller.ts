@@ -11,6 +11,9 @@ const updateProductSchema = z
     name: z.string().trim().min(1).optional(),
     description: z.string().trim().min(1).optional(),
     priceCents: z.number().int().positive().optional(),
+    amount: z.string().trim().min(1).nullable().optional(),
+    size: z.string().trim().min(1).nullable().optional(),
+    calories: z.number().int().positive().nullable().optional(),
     category: z.string().trim().min(1).nullable().optional(),
     imageUrl: z.string().trim().min(1).nullable().optional(),
     isAvailable: z.boolean().optional()
@@ -23,6 +26,9 @@ const createProductSchema = z.object({
   name: z.string().trim().min(1),
   description: z.string().trim().min(1),
   priceCents: z.number().int().positive(),
+  amount: z.string().trim().min(1).nullable().optional(),
+  size: z.string().trim().min(1).nullable().optional(),
+  calories: z.number().int().positive().nullable().optional(),
   category: z.string().trim().min(1).nullable().optional(),
   imageUrl: z.string().trim().min(1).nullable().optional(),
   isAvailable: z.boolean().optional()
