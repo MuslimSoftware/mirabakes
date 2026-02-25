@@ -8,17 +8,39 @@ function generateOrderNumber() {
   return `MB-${timestamp}-${random}`;
 }
 
+function fillOrderNumberTemplate(template: string, orderNumber: string) {
+  return template
+    .replaceAll("{ORDER_NUMBER}", orderNumber)
+    .replaceAll("{orderNumber}", orderNumber);
+}
+
+function isHttpUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function resolveSuccessUrl(orderNumber: string, origin: string) {
+  const fallback = `${origin}/order/${orderNumber}`;
   const template = process.env.STRIPE_SUCCESS_URL_TEMPLATE;
   if (!template) {
-    return `${origin}/order/${orderNumber}`;
+    return fallback;
   }
 
-  return template.replace("{ORDER_NUMBER}", orderNumber);
+  const resolved = fillOrderNumberTemplate(template, orderNumber);
+  return isHttpUrl(resolved) ? resolved : fallback;
 }
 
 function resolveCancelUrl(origin: string) {
-  return process.env.STRIPE_CANCEL_URL ?? `${origin}`;
+  const configured = process.env.STRIPE_CANCEL_URL;
+  if (!configured) {
+    return `${origin}`;
+  }
+
+  return isHttpUrl(configured) ? configured : `${origin}`;
 }
 
 export class CheckoutService {
