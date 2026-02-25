@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import {
   type AdminCreateProductInput,
@@ -59,17 +59,23 @@ function normalizeProductPayload(draft: ProductDraft): AdminCreateProductInput {
 function ImageUploadField({
   imageUrl,
   onImageUrlChange,
-  token
+  token,
+  onUploadingChange
 }: {
   imageUrl: string;
   onImageUrlChange: (url: string) => void;
   token: string;
+  onUploadingChange?: (isUploading: boolean) => void;
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputId = useId();
   const uploadMutation = useMutation({
     mutationFn: (file: File) => uploadsClient.uploadImage(file, token),
     onSuccess: (data) => onImageUrlChange(data.url)
   });
+
+  useEffect(() => {
+    onUploadingChange?.(uploadMutation.isPending);
+  }, [onUploadingChange, uploadMutation.isPending]);
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -90,21 +96,39 @@ function ImageUploadField({
           style={{ flex: 1 }}
         />
         <input
-          ref={fileInputRef}
+          id={fileInputId}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/*"
           onChange={handleFileChange}
-          style={{ display: "none" }}
-        />
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => fileInputRef.current?.click()}
           disabled={uploadMutation.isPending}
-          style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem", whiteSpace: "nowrap" }}
+          style={{
+            position: "absolute",
+            left: "-9999px",
+            width: "1px",
+            height: "1px",
+            opacity: 0,
+            pointerEvents: "none"
+          }}
+        />
+        <label
+          htmlFor={fileInputId}
+          className="secondary"
+          aria-disabled={uploadMutation.isPending}
+          onClick={(event) => {
+            if (uploadMutation.isPending) {
+              event.preventDefault();
+            }
+          }}
+          style={{
+            padding: "0.3rem 0.5rem",
+            fontSize: "0.85rem",
+            whiteSpace: "nowrap",
+            opacity: uploadMutation.isPending ? 0.6 : 1,
+            pointerEvents: uploadMutation.isPending ? "none" : "auto"
+          }}
         >
           {uploadMutation.isPending ? "..." : "Upload"}
-        </button>
+        </label>
       </div>
       {uploadMutation.isError ? (
         <small style={{ color: "var(--color-danger, red)" }}>
@@ -138,6 +162,7 @@ function EditProductForm({
   const [priceCents, setPriceCents] = useState(String(product.priceCents));
   const [category, setCategory] = useState(product.category ?? "");
   const [imageUrl, setImageUrl] = useState(product.imageUrl ?? "");
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const [isAvailable, setIsAvailable] = useState(product.isAvailable);
 
   useEffect(() => {
@@ -146,6 +171,7 @@ function EditProductForm({
     setPriceCents(String(product.priceCents));
     setCategory(product.category ?? "");
     setImageUrl(product.imageUrl ?? "");
+    setIsImageUploading(false);
     setIsAvailable(product.isAvailable);
   }, [product]);
 
@@ -184,7 +210,12 @@ function EditProductForm({
           <span>Category</span>
           <input value={category} onChange={(e) => setCategory(e.target.value)} />
         </label>
-        <ImageUploadField imageUrl={imageUrl} onImageUrlChange={setImageUrl} token={token} />
+        <ImageUploadField
+          imageUrl={imageUrl}
+          onImageUrlChange={setImageUrl}
+          token={token}
+          onUploadingChange={setIsImageUploading}
+        />
         <label className="admin-checkbox">
           <input type="checkbox" checked={isAvailable} onChange={(e) => setIsAvailable(e.target.checked)} />
           <span>Available</span>
@@ -199,13 +230,14 @@ function EditProductForm({
               type="button"
               className="primary"
               onClick={() => updateMutation.mutate()}
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || isImageUploading}
             >
-              {updateMutation.isPending ? "Saving..." : "Save"}
+              {isImageUploading ? "Uploading image..." : updateMutation.isPending ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
       </div>
+      {isImageUploading ? <p className="muted">Wait for the image upload to finish before saving.</p> : null}
       {updateMutation.isError ? (
         <p className="admin-error">
           {(updateMutation.error as ApiClientError)?.message ?? "Failed to update product"}
@@ -217,6 +249,7 @@ function EditProductForm({
 
 function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
   const [draft, setDraft] = useState<ProductDraft>(emptyCreateDraft);
+  const [isImageUploading, setIsImageUploading] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -228,6 +261,7 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
     },
     onSuccess: () => {
       setDraft(emptyCreateDraft);
+      setIsImageUploading(false);
       onCreated();
     }
   });
@@ -256,7 +290,12 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
           <span>Category</span>
           <input value={draft.category} onChange={(e) => setField("category", e.target.value)} />
         </label>
-        <ImageUploadField imageUrl={draft.imageUrl} onImageUrlChange={(url) => setField("imageUrl", url)} token={token} />
+        <ImageUploadField
+          imageUrl={draft.imageUrl}
+          onImageUrlChange={(url) => setField("imageUrl", url)}
+          token={token}
+          onUploadingChange={setIsImageUploading}
+        />
         <label className="admin-checkbox">
           <input type="checkbox" checked={draft.isAvailable} onChange={(e) => setField("isAvailable", e.target.checked)} />
           <span>Available</span>
@@ -267,12 +306,13 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
             type="button"
             className="primary"
             onClick={() => createMutation.mutate()}
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || isImageUploading}
           >
-            {createMutation.isPending ? "Creating..." : "Create"}
+            {isImageUploading ? "Uploading image..." : createMutation.isPending ? "Creating..." : "Create"}
           </button>
         </div>
       </div>
+      {isImageUploading ? <p className="muted">Wait for the image upload to finish before creating.</p> : null}
       {createMutation.isError ? (
         <p className="admin-error">
           {(createMutation.error as ApiClientError)?.message ?? "Failed to create product"}
