@@ -450,7 +450,7 @@ export function AdminProductsPanel({ token }: { token: string }) {
   }
 
   function handleDelete(product: Product) {
-    if (!window.confirm(`Delete ${product.name}? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${product.name}? Products with order history are archived automatically.`)) return;
     deleteMutation.mutate(product.id);
   }
 

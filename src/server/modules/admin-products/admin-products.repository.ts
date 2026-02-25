@@ -95,6 +95,15 @@ export class AdminProductsRepository {
       where: { id }
     });
   }
+
+  async archiveById(id: string): Promise<void> {
+    await prisma.product.update({
+      where: { id },
+      data: {
+        isAvailable: false
+      }
+    });
+  }
 }
 
 export const adminProductsRepository = new AdminProductsRepository();

@@ -115,6 +115,8 @@ export class CheckoutService {
       }
     });
 
+    await checkoutRepository.attachStripeSessionId(orderNumber, session.id);
+
     if (!session.url) {
       throw new AppError("Unable to create checkout URL", 500, "stripe_checkout_failed");
     }

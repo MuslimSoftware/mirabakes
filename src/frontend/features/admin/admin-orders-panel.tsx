@@ -284,7 +284,7 @@ function OrderDetailPanel({
 }
 
 export function AdminOrdersPanel({ token }: { token: string }) {
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("paid");
   const [page, setPage] = useState(1);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 

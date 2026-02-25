@@ -101,11 +101,8 @@ export class AdminProductsService {
 
     const usedInOrders = await adminProductsRepository.countOrderItemsByProductId(id);
     if (usedInOrders > 0) {
-      throw new AppError(
-        "Cannot delete product that already appears in orders",
-        409,
-        "product_in_use"
-      );
+      await adminProductsRepository.archiveById(id);
+      return;
     }
 
     await adminProductsRepository.deleteById(id);

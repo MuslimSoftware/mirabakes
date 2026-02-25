@@ -2,6 +2,7 @@ import { OrderStatus } from "@prisma/client";
 
 import { createStripeRefund } from "@/server/integrations/stripe/stripe.client";
 import { adminOrdersRepository } from "@/server/modules/admin-orders/admin-orders.repository";
+import { getPendingOrderExpiryCutoff } from "@/server/modules/orders/order-expiry";
 import { paymentsRepository } from "@/server/modules/payments/payments.repository";
 import { AppError } from "@/server/shared/errors/app-error";
 import type { AdminOrder } from "@/shared/types/domain";
@@ -59,6 +60,7 @@ async function refundViaStripe(orderId: string, amountCents?: number) {
 
 export class AdminOrdersService {
   async list(input: { page: number; pageSize: number; status?: OrderStatus }) {
+    await adminOrdersRepository.expirePendingOlderThan(getPendingOrderExpiryCutoff());
     const result = await adminOrdersRepository.findAll(input);
 
     const items: AdminOrder[] = result.items.map(mapOrder);
@@ -73,6 +75,7 @@ export class AdminOrdersService {
   }
 
   async getById(id: string) {
+    await adminOrdersRepository.expirePendingOlderThan(getPendingOrderExpiryCutoff());
     const order = await adminOrdersRepository.findById(id);
     if (!order) {
       throw new AppError("Order not found", 404, "order_not_found");

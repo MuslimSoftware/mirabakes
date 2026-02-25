@@ -6,7 +6,9 @@ import { useApiCached } from "@/frontend/hooks/useApiCached";
 export function OrderStatusView({ orderNumber }: { orderNumber: string }) {
   const { data, isLoading, error } = useApiCached({
     queryKey: ["order", orderNumber],
-    queryFn: () => ordersClient.getStatus(orderNumber)
+    queryFn: () => ordersClient.getStatus(orderNumber),
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: true
   });
 
   if (isLoading) {

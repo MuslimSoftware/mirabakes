@@ -1,4 +1,4 @@
-import { type OrderStatus } from "@prisma/client";
+import { OrderStatus } from "@prisma/client";
 
 import { prisma } from "@/server/shared/db/prisma";
 
@@ -18,6 +18,18 @@ const orderInclude = {
 } as const;
 
 export class AdminOrdersRepository {
+  async expirePendingOlderThan(cutoff: Date) {
+    await prisma.order.updateMany({
+      where: {
+        status: OrderStatus.PENDING,
+        createdAt: { lt: cutoff }
+      },
+      data: {
+        status: OrderStatus.FAILED
+      }
+    });
+  }
+
   async findAll(input: ListAdminOrdersInput) {
     const skip = (input.page - 1) * input.pageSize;
     const where = input.status ? { status: input.status } : {};

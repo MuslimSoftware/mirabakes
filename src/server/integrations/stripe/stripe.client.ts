@@ -38,6 +38,7 @@ export async function createStripeCheckoutSession(input: {
   metadata: Record<string, string>;
 }) {
   const stripe = getStripeClient();
+  const orderNumber = input.metadata.orderNumber;
 
   return stripe.checkout.sessions.create({
     mode: "payment",
@@ -55,6 +56,15 @@ export async function createStripeCheckoutSession(input: {
     customer_email: input.customerEmail,
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
+    ...(orderNumber ? { client_reference_id: orderNumber } : {}),
+    payment_intent_data: {
+      metadata: input.metadata
+    },
     metadata: input.metadata
   });
+}
+
+export async function retrieveStripeCheckoutSession(sessionId: string) {
+  const stripe = getStripeClient();
+  return stripe.checkout.sessions.retrieve(sessionId);
 }

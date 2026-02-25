@@ -54,6 +54,44 @@ export class OrdersRepository {
     };
   }
 
+  async findStatusByOrderNumber(orderNumber: string) {
+    return prisma.order.findUnique({
+      where: { orderNumber },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        subtotalCents: true,
+        createdAt: true,
+        stripeSessionId: true
+      }
+    });
+  }
+
+  async setStripeSessionIdByOrderNumber(orderNumber: string, stripeSessionId: string) {
+    await prisma.order.update({
+      where: { orderNumber },
+      data: {
+        stripeSessionId
+      }
+    });
+  }
+
+  async expirePendingByOrderNumberIfOlderThan(orderNumber: string, cutoff: Date) {
+    const result = await prisma.order.updateMany({
+      where: {
+        orderNumber,
+        status: OrderStatus.PENDING,
+        createdAt: { lt: cutoff }
+      },
+      data: {
+        status: OrderStatus.FAILED
+      }
+    });
+
+    return result.count > 0;
+  }
+
   async markPaidByOrderNumber(orderNumber: string, stripeSessionId: string) {
     return prisma.order.update({
       where: { orderNumber },
