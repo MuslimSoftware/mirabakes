@@ -8,8 +8,19 @@ type ListAvailableInput = {
   q?: string;
 };
 
+type ProductWithImages = Product & {
+  images: { id: string; position: number }[];
+};
+
+const imagesInclude = {
+  images: {
+    select: { id: true, position: true },
+    orderBy: { position: "asc" as const }
+  }
+};
+
 export class ProductsRepository {
-  async findAvailable(input: ListAvailableInput): Promise<{ items: Product[]; total: number }> {
+  async findAvailable(input: ListAvailableInput): Promise<{ items: ProductWithImages[]; total: number }> {
     const skip = (input.page - 1) * input.pageSize;
     const where = {
       isAvailable: true,
@@ -29,7 +40,8 @@ export class ProductsRepository {
         where,
         skip,
         take: input.pageSize,
-        orderBy: { createdAt: "desc" }
+        orderBy: { createdAt: "desc" },
+        include: imagesInclude
       }),
       prisma.product.count({ where })
     ]);
@@ -37,8 +49,11 @@ export class ProductsRepository {
     return { items, total };
   }
 
-  async findBySlug(slug: string): Promise<Product | null> {
-    return prisma.product.findUnique({ where: { slug } });
+  async findBySlug(slug: string): Promise<ProductWithImages | null> {
+    return prisma.product.findUnique({
+      where: { slug },
+      include: imagesInclude
+    });
   }
 
   async findByIds(ids: string[]): Promise<Product[]> {

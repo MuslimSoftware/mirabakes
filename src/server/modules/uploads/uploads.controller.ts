@@ -12,13 +12,18 @@ export class UploadsController {
 
       const formData = await request.formData();
       const file = formData.get("file");
+      const productId = formData.get("productId");
 
       if (!file || !(file instanceof File)) {
         throw new AppError("Missing file in form data", 400, "missing_file");
       }
 
-      const url = await uploadsService.saveImage(file);
-      return NextResponse.json({ data: { url } }, { status: 201 });
+      if (!productId || typeof productId !== "string") {
+        throw new AppError("Missing productId in form data", 400, "missing_product_id");
+      }
+
+      const result = await uploadsService.saveImage(file, productId);
+      return NextResponse.json({ data: result }, { status: 201 });
     } catch (error) {
       return handleRouteError(error);
     }

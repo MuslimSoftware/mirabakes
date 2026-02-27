@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import {
   type AdminCreateProductInput,
@@ -26,7 +26,6 @@ type ProductDraft = {
   size: string;
   calories: string;
   category: string;
-  imageUrl: string;
   isAvailable: boolean;
 };
 
@@ -38,7 +37,6 @@ const emptyCreateDraft: ProductDraft = {
   size: "",
   calories: "",
   category: "",
-  imageUrl: "",
   isAvailable: true
 };
 
@@ -79,97 +77,295 @@ function normalizeProductPayload(draft: ProductDraft): AdminCreateProductInput {
     size: normalizeOptionalText(draft.size),
     calories: parseOptionalCalories(draft.calories),
     category: normalizeOptionalText(draft.category),
-    imageUrl: normalizeOptionalText(draft.imageUrl),
     isAvailable: draft.isAvailable
   };
 }
 
-function ImageUploadField({
-  imageUrl,
-  onImageUrlChange,
-  token,
-  onUploadingChange
-}: {
-  imageUrl: string;
-  onImageUrlChange: (url: string) => void;
+type ImageGalleryFieldProps = {
+  productId: string | null;
+  imageUrls: string[];
   token: string;
-  onUploadingChange?: (isUploading: boolean) => void;
-}) {
+  onImagesChanged: () => void;
+};
+
+type PendingImage = {
+  file: File;
+  previewUrl: string;
+};
+
+function ImageGalleryField({ productId, imageUrls, token, onImagesChanged }: ImageGalleryFieldProps) {
   const fileInputId = useId();
-  const uploadMutation = useMutation({
-    mutationFn: (file: File) => uploadsClient.uploadImage(file, token),
-    onSuccess: (data) => onImageUrlChange(data.url)
-  });
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const pendingImagesRef = useRef<PendingImage[]>([]);
 
   useEffect(() => {
-    onUploadingChange?.(uploadMutation.isPending);
-  }, [onUploadingChange, uploadMutation.isPending]);
+    pendingImagesRef.current = pendingImages;
+  }, [pendingImages]);
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  useEffect(() => {
+    return () => {
+      for (const img of pendingImagesRef.current) {
+        URL.revokeObjectURL(img.previewUrl);
+      }
+    };
+  }, []);
+
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    if (file) {
-      uploadMutation.mutate(file);
-    }
     event.target.value = "";
+    if (!file) return;
+
+    if (productId) {
+      setIsUploading(true);
+      setUploadError(null);
+      try {
+        await uploadsClient.uploadImage(file, productId, token);
+        onImagesChanged();
+      } catch (err) {
+        setUploadError(err instanceof ApiClientError ? err.message : "Upload failed");
+      } finally {
+        setIsUploading(false);
+      }
+    } else {
+      const previewUrl = URL.createObjectURL(file);
+      setPendingImages((prev) => [...prev, { file, previewUrl }]);
+    }
   }
+
+  async function handleRemoveExisting(imageUrl: string) {
+    if (!productId) return;
+    const imageId = imageUrl.split("/").pop();
+    if (!imageId) return;
+    setUploadError(null);
+    try {
+      await adminProductsClient.deleteImage(productId, imageId, token);
+      onImagesChanged();
+    } catch (err) {
+      setUploadError(err instanceof ApiClientError ? err.message : "Delete failed");
+    }
+  }
+
+  function handleRemovePending(index: number) {
+    setPendingImages((prev) => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  }
+
+  const allPreviews = [
+    ...imageUrls.map((url) => ({ url, isPending: false, index: -1 })),
+    ...pendingImages.map((img, i) => ({ url: img.previewUrl, isPending: true, index: i }))
+  ];
 
   return (
     <div className="admin-field admin-field-wide">
-      <span>Image</span>
-      <div style={{ display: "flex", gap: "0.25rem" }}>
-        <input
-          value={imageUrl}
-          onChange={(event) => onImageUrlChange(event.target.value)}
-          placeholder="URL or upload"
-          style={{ flex: 1 }}
-        />
-        <input
-          id={fileInputId}
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          disabled={uploadMutation.isPending}
-          style={{
-            position: "absolute",
-            left: "-9999px",
-            width: "1px",
-            height: "1px",
-            opacity: 0,
-            pointerEvents: "none"
-          }}
-        />
-        <label
-          htmlFor={fileInputId}
-          className="secondary"
-          aria-disabled={uploadMutation.isPending}
-          onClick={(event) => {
-            if (uploadMutation.isPending) {
-              event.preventDefault();
-            }
-          }}
-          style={{
-            padding: "0.3rem 0.5rem",
-            fontSize: "0.85rem",
-            whiteSpace: "nowrap",
-            opacity: uploadMutation.isPending ? 0.6 : 1,
-            pointerEvents: uploadMutation.isPending ? "none" : "auto"
-          }}
-        >
-          {uploadMutation.isPending ? "..." : "Upload"}
-        </label>
+      <span>Images</span>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.5rem" }}>
+        {allPreviews.map(({ url, isPending, index }) => (
+          <div
+            key={url}
+            style={{ position: "relative", display: "inline-block" }}
+          >
+            <img
+              src={url}
+              alt="Product image"
+              style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 4, display: "block" }}
+            />
+            <button
+              type="button"
+              onClick={() => isPending ? handleRemovePending(index) : handleRemoveExisting(url)}
+              style={{
+                position: "absolute",
+                top: -6,
+                right: -6,
+                width: 18,
+                height: 18,
+                borderRadius: "50%",
+                border: "none",
+                background: "var(--color-danger, red)",
+                color: "#fff",
+                fontSize: 11,
+                lineHeight: "18px",
+                textAlign: "center",
+                cursor: "pointer",
+                padding: 0
+              }}
+              title="Remove image"
+            >
+              &times;
+            </button>
+          </div>
+        ))}
       </div>
-      {uploadMutation.isError ? (
-        <small style={{ color: "var(--color-danger, red)" }}>
-          {(uploadMutation.error as ApiClientError)?.message ?? "Upload failed"}
+      <input
+        id={fileInputId}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        disabled={isUploading}
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          width: "1px",
+          height: "1px",
+          opacity: 0,
+          pointerEvents: "none"
+        }}
+      />
+      <label
+        htmlFor={fileInputId}
+        className="secondary"
+        aria-disabled={isUploading}
+        onClick={(event) => {
+          if (isUploading) event.preventDefault();
+        }}
+        style={{
+          display: "inline-block",
+          padding: "0.3rem 0.5rem",
+          fontSize: "0.85rem",
+          whiteSpace: "nowrap",
+          opacity: isUploading ? 0.6 : 1,
+          pointerEvents: isUploading ? "none" : "auto",
+          cursor: "pointer"
+        }}
+      >
+        {isUploading ? "Uploading..." : "+ Add image"}
+      </label>
+      {uploadError ? (
+        <small style={{ color: "var(--color-danger, red)", display: "block", marginTop: "0.25rem" }}>
+          {uploadError}
         </small>
       ) : null}
-      {imageUrl ? (
-        <img
-          src={imageUrl}
-          alt="Preview"
-          style={{ marginTop: "0.25rem", maxHeight: "64px", borderRadius: "4px", objectFit: "cover" }}
-        />
-      ) : null}
+    </div>
+  );
+}
+
+type ImageGalleryFieldHandle = {
+  getPendingFiles: () => File[];
+  isUploading: boolean;
+};
+
+function ImageGalleryFieldWithRef({
+  imageUrls,
+  handleRef
+}: Pick<ImageGalleryFieldProps, "imageUrls"> & { handleRef: React.MutableRefObject<ImageGalleryFieldHandle | null> }) {
+  const fileInputId = useId();
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const pendingImagesRef = useRef<PendingImage[]>([]);
+
+  useEffect(() => {
+    pendingImagesRef.current = pendingImages;
+  }, [pendingImages]);
+
+  useEffect(() => {
+    handleRef.current = {
+      getPendingFiles: () => pendingImagesRef.current.map((img) => img.file),
+      isUploading: false
+    };
+  }, [handleRef]);
+
+  useEffect(() => {
+    return () => {
+      for (const img of pendingImagesRef.current) {
+        URL.revokeObjectURL(img.previewUrl);
+      }
+    };
+  }, []);
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const previewUrl = URL.createObjectURL(file);
+    setPendingImages((prev) => [...prev, { file, previewUrl }]);
+  }
+
+  function handleRemovePending(index: number) {
+    setPendingImages((prev) => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  }
+
+  const allPreviews = [
+    ...imageUrls.map((url) => ({ url, isPending: false, index: -1 })),
+    ...pendingImages.map((img, i) => ({ url: img.previewUrl, isPending: true, index: i }))
+  ];
+
+  return (
+    <div className="admin-field admin-field-wide">
+      <span>Images</span>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.5rem" }}>
+        {allPreviews.map(({ url, isPending, index }) => (
+          <div
+            key={url}
+            style={{ position: "relative", display: "inline-block" }}
+          >
+            <img
+              src={url}
+              alt="Product image"
+              style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 4, display: "block" }}
+            />
+            {isPending ? (
+              <button
+                type="button"
+                onClick={() => handleRemovePending(index)}
+                style={{
+                  position: "absolute",
+                  top: -6,
+                  right: -6,
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  border: "none",
+                  background: "var(--color-danger, red)",
+                  color: "#fff",
+                  fontSize: 11,
+                  lineHeight: "18px",
+                  textAlign: "center",
+                  cursor: "pointer",
+                  padding: 0
+                }}
+                title="Remove image"
+              >
+                &times;
+              </button>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      <input
+        id={fileInputId}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          width: "1px",
+          height: "1px",
+          opacity: 0,
+          pointerEvents: "none"
+        }}
+      />
+      <label
+        htmlFor={fileInputId}
+        className="secondary"
+        style={{
+          display: "inline-block",
+          padding: "0.3rem 0.5rem",
+          fontSize: "0.85rem",
+          whiteSpace: "nowrap",
+          cursor: "pointer"
+        }}
+      >
+        + Add image
+      </label>
     </div>
   );
 }
@@ -178,12 +374,14 @@ function EditProductForm({
   product,
   token,
   onSaved,
-  onCancel
+  onCancel,
+  onImagesChanged
 }: {
   product: Product;
   token: string;
   onSaved: () => void;
   onCancel: () => void;
+  onImagesChanged: () => void;
 }) {
   const [name, setName] = useState(product.name);
   const [description, setDescription] = useState(product.description);
@@ -192,8 +390,6 @@ function EditProductForm({
   const [size, setSize] = useState(product.size ?? "");
   const [calories, setCalories] = useState(product.calories ? String(product.calories) : "");
   const [category, setCategory] = useState(product.category ?? "");
-  const [imageUrl, setImageUrl] = useState(product.imageUrl ?? "");
-  const [isImageUploading, setIsImageUploading] = useState(false);
   const [isAvailable, setIsAvailable] = useState(product.isAvailable);
 
   useEffect(() => {
@@ -204,8 +400,6 @@ function EditProductForm({
     setSize(product.size ?? "");
     setCalories(product.calories ? String(product.calories) : "");
     setCategory(product.category ?? "");
-    setImageUrl(product.imageUrl ?? "");
-    setIsImageUploading(false);
     setIsAvailable(product.isAvailable);
   }, [product]);
 
@@ -219,7 +413,6 @@ function EditProductForm({
         size: normalizeOptionalText(size),
         calories: parseOptionalCalories(calories),
         category: normalizeOptionalText(category),
-        imageUrl: normalizeOptionalText(imageUrl),
         isAvailable
       };
       return adminProductsClient.update(product.id, payload, token);
@@ -259,11 +452,11 @@ function EditProductForm({
           <span>Category</span>
           <input value={category} onChange={(e) => setCategory(e.target.value)} />
         </label>
-        <ImageUploadField
-          imageUrl={imageUrl}
-          onImageUrlChange={setImageUrl}
+        <ImageGalleryField
+          productId={product.id}
+          imageUrls={product.imageUrls ?? []}
           token={token}
-          onUploadingChange={setIsImageUploading}
+          onImagesChanged={onImagesChanged}
         />
         <label className="admin-checkbox">
           <input type="checkbox" checked={isAvailable} onChange={(e) => setIsAvailable(e.target.checked)} />
@@ -279,14 +472,13 @@ function EditProductForm({
               type="button"
               className="primary"
               onClick={() => updateMutation.mutate()}
-              disabled={updateMutation.isPending || isImageUploading}
+              disabled={updateMutation.isPending}
             >
-              {isImageUploading ? "Uploading image..." : updateMutation.isPending ? "Saving..." : "Save"}
+              {updateMutation.isPending ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
       </div>
-      {isImageUploading ? <p className="muted">Wait for the image upload to finish before saving.</p> : null}
       {updateMutation.isError ? (
         <p className="admin-error">
           {(updateMutation.error as ApiClientError)?.message ?? "Failed to update product"}
@@ -298,7 +490,8 @@ function EditProductForm({
 
 function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
   const [draft, setDraft] = useState<ProductDraft>(emptyCreateDraft);
-  const [isImageUploading, setIsImageUploading] = useState(false);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const galleryRef = useRef<ImageGalleryFieldHandle | null>(null);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -306,18 +499,31 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
       if (!payload.name || !payload.description) {
         throw new Error("Name and description are required");
       }
-      return adminProductsClient.create(payload, token);
+      const product = await adminProductsClient.create(payload, token);
+
+      const pendingFiles = galleryRef.current?.getPendingFiles() ?? [];
+      if (pendingFiles.length > 0) {
+        setIsUploadingFiles(true);
+        await Promise.all(pendingFiles.map((file) => uploadsClient.uploadImage(file, product.id, token)));
+        setIsUploadingFiles(false);
+      }
+
+      return product;
     },
     onSuccess: () => {
       setDraft(emptyCreateDraft);
-      setIsImageUploading(false);
       onCreated();
+    },
+    onError: () => {
+      setIsUploadingFiles(false);
     }
   });
 
   function setField<K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) {
     setDraft((previous) => ({ ...previous, [key]: value }));
   }
+
+  const isBusy = createMutation.isPending || isUploadingFiles;
 
   return (
     <section className="card" style={{ marginBottom: "1rem" }}>
@@ -357,11 +563,9 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
           <span>Category</span>
           <input value={draft.category} onChange={(e) => setField("category", e.target.value)} />
         </label>
-        <ImageUploadField
-          imageUrl={draft.imageUrl}
-          onImageUrlChange={(url) => setField("imageUrl", url)}
-          token={token}
-          onUploadingChange={setIsImageUploading}
+        <ImageGalleryFieldWithRef
+          imageUrls={[]}
+          handleRef={galleryRef}
         />
         <label className="admin-checkbox">
           <input type="checkbox" checked={draft.isAvailable} onChange={(e) => setField("isAvailable", e.target.checked)} />
@@ -373,13 +577,12 @@ function CreateProductForm({ token, onCreated }: CreateProductFormProps) {
             type="button"
             className="primary"
             onClick={() => createMutation.mutate()}
-            disabled={createMutation.isPending || isImageUploading}
+            disabled={isBusy}
           >
-            {isImageUploading ? "Uploading image..." : createMutation.isPending ? "Creating..." : "Create"}
+            {isUploadingFiles ? "Uploading images..." : createMutation.isPending ? "Creating..." : "Create"}
           </button>
         </div>
       </div>
-      {isImageUploading ? <p className="muted">Wait for the image upload to finish before creating.</p> : null}
       {createMutation.isError ? (
         <p className="admin-error">
           {(createMutation.error as ApiClientError)?.message ?? "Failed to create product"}
@@ -479,6 +682,7 @@ export function AdminProductsPanel({ token }: { token: string }) {
           token={token}
           onSaved={handleEditSaved}
           onCancel={() => setEditingProductId(null)}
+          onImagesChanged={refreshList}
         />
       ) : null}
 
@@ -534,51 +738,54 @@ export function AdminProductsPanel({ token }: { token: string }) {
               </tr>
             </thead>
             <tbody>
-              {productsQuery.data.items.map((product) => (
-                <tr
-                  key={product.id}
-                  style={editingProductId === product.id ? { background: "rgba(199,109,58,0.06)" } : undefined}
-                >
-                  <td>
-                    {product.imageUrl ? (
-                      <img className="thumb" src={product.imageUrl} alt={product.name} />
-                    ) : (
-                      <div className="thumb-placeholder" />
-                    )}
-                  </td>
-                  <td><strong>{product.name}</strong></td>
-                  <td className="muted">{product.category ?? "—"}</td>
-                  <td className="text-right">${(product.priceCents / 100).toFixed(2)}</td>
-                  <td>
-                    <span className={`badge ${product.isAvailable ? "badge-available" : "badge-unavailable"}`}>
-                      {product.isAvailable ? "Available" : "Unavailable"}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", gap: "0.25rem" }}>
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() => setEditingProductId(product.id)}
-                        title="Edit"
-                        style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
-                      >
-                        &#9998;
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary danger"
-                        onClick={() => handleDelete(product)}
-                        disabled={deleteMutation.isPending}
-                        title="Delete"
-                        style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
-                      >
-                        {deleteMutation.isPending ? "..." : "\u2715"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {productsQuery.data.items.map((product) => {
+                const thumbUrl = product.imageUrls?.[0] ?? product.imageUrl;
+                return (
+                  <tr
+                    key={product.id}
+                    style={editingProductId === product.id ? { background: "rgba(199,109,58,0.06)" } : undefined}
+                  >
+                    <td>
+                      {thumbUrl ? (
+                        <img className="thumb" src={thumbUrl} alt={product.name} />
+                      ) : (
+                        <div className="thumb-placeholder" />
+                      )}
+                    </td>
+                    <td><strong>{product.name}</strong></td>
+                    <td className="muted">{product.category ?? "—"}</td>
+                    <td className="text-right">${(product.priceCents / 100).toFixed(2)}</td>
+                    <td>
+                      <span className={`badge ${product.isAvailable ? "badge-available" : "badge-unavailable"}`}>
+                        {product.isAvailable ? "Available" : "Unavailable"}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: "0.25rem" }}>
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => setEditingProductId(product.id)}
+                          title="Edit"
+                          style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
+                        >
+                          &#9998;
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary danger"
+                          onClick={() => handleDelete(product)}
+                          disabled={deleteMutation.isPending}
+                          title="Delete"
+                          style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
+                        >
+                          {deleteMutation.isPending ? "..." : "\u2715"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -1,4 +1,5 @@
 import type { Product } from "@/shared/types/domain";
+import { ImageCarousel } from "./image-carousel";
 
 export function ProductCard({
   product,
@@ -11,26 +12,18 @@ export function ProductCard({
   quantity: number;
   onAdd: () => void;
   onRemove: () => void;
-  onImageClick?: () => void;
+  onImageClick?: (index: number) => void;
 }) {
   const hasDetails = Boolean(product.amount || product.size || product.calories);
+  const images = product.imageUrls?.length ? product.imageUrls : product.imageUrl ? [product.imageUrl] : [];
 
   return (
     <article className="card product-card">
-      {product.imageUrl ? (
-        onImageClick ? (
-          <button
-            className="product-image-button"
-            type="button"
-            onClick={onImageClick}
-            aria-label={`Open full image for ${product.name}`}
-          >
-            <img className="product-image" src={product.imageUrl} alt={product.name} loading="lazy" />
-          </button>
-        ) : (
-          <img className="product-image" src={product.imageUrl} alt={product.name} loading="lazy" />
-        )
-      ) : null}
+      <ImageCarousel
+        images={images}
+        alt={product.name}
+        onImageClick={onImageClick ? (index) => onImageClick(index) : undefined}
+      />
       <h3>{product.name}</h3>
       {hasDetails ? (
         <div className="product-details">

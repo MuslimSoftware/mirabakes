@@ -35,8 +35,6 @@ RUN npm install --no-save prisma@6.2.1
 COPY scripts/prod-entrypoint.sh ./prod-entrypoint.sh
 RUN chmod +x ./prod-entrypoint.sh
 
-RUN mkdir -p public/uploads && chown -R nextjs:nodejs public/uploads
-
 USER nextjs
 
 EXPOSE 3000

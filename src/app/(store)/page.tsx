@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 
 import { checkoutClient } from "@/frontend/api/clients/checkout.client";
@@ -14,17 +14,16 @@ export default function StorePage() {
   const [page, setPage] = useState(1);
   const [cart, setCart] = useState<Record<string, { name: string; quantity: number; unitPriceCents: number }>>({});
   const [phone, setPhone] = useState("");
-  const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{ urls: string[]; alt: string; index: number } | null>(null);
+  const [modalIndex, setModalIndex] = useState(0);
+  const modalCarouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!selectedImage) {
-      return;
-    }
+    if (!selectedImage) return;
+    setModalIndex(selectedImage.index);
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setSelectedImage(null);
-      }
+      if (event.key === "Escape") setSelectedImage(null);
     }
 
     window.addEventListener("keydown", onKeyDown);
@@ -35,6 +34,25 @@ export default function StorePage() {
       document.body.style.overflow = "";
     };
   }, [selectedImage]);
+
+  useEffect(() => {
+    if (!selectedImage || !modalCarouselRef.current) return;
+    const track = modalCarouselRef.current;
+    track.scrollTo({ left: selectedImage.index * track.clientWidth, behavior: "instant" });
+  }, [selectedImage]);
+
+  function scrollModalTo(index: number) {
+    const track = modalCarouselRef.current;
+    if (!track) return;
+    track.scrollTo({ left: index * track.clientWidth, behavior: "smooth" });
+    setModalIndex(index);
+  }
+
+  function handleModalScroll() {
+    const track = modalCarouselRef.current;
+    if (!track) return;
+    setModalIndex(Math.round(track.scrollLeft / track.clientWidth));
+  }
 
   const productsQuery = useApiPaginatedCached({
     queryKey: ["products"],
@@ -115,7 +133,7 @@ export default function StorePage() {
           ? Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={i} />)
           : null}
         {productsQuery.data?.items.map((product) => {
-          const imageUrl = product.imageUrl;
+          const images = product.imageUrls?.length ? product.imageUrls : product.imageUrl ? [product.imageUrl] : [];
 
           return (
             <ProductCard
@@ -124,7 +142,7 @@ export default function StorePage() {
               quantity={cart[product.id]?.quantity ?? 0}
               onAdd={() => addToCart(product.id, product.name, product.priceCents)}
               onRemove={() => removeFromCart(product.id)}
-              onImageClick={imageUrl ? () => setSelectedImage({ url: imageUrl, alt: product.name }) : undefined}
+              onImageClick={images.length > 0 ? (index) => setSelectedImage({ urls: images, alt: product.name, index }) : undefined}
             />
           );
         })}
@@ -179,12 +197,62 @@ export default function StorePage() {
           >
             &times;
           </button>
-          <img
-            className="image-modal-image"
-            src={selectedImage.url}
-            alt={selectedImage.alt}
-            onClick={(event) => event.stopPropagation()}
-          />
+
+          {selectedImage.urls.length === 1 ? (
+            <img
+              className="image-modal-image"
+              src={selectedImage.urls[0]}
+              alt={selectedImage.alt}
+              onClick={(event) => event.stopPropagation()}
+            />
+          ) : (
+            <>
+              <div
+                className="image-modal-carousel"
+                ref={modalCarouselRef}
+                onScroll={handleModalScroll}
+                onClick={(event) => event.stopPropagation()}
+              >
+                {selectedImage.urls.map((src, i) => (
+                  <img key={i} src={src} alt={`${selectedImage.alt} ${i + 1}`} />
+                ))}
+              </div>
+
+              {modalIndex > 0 ? (
+                <button
+                  className="image-modal-nav prev"
+                  type="button"
+                  aria-label="Previous image"
+                  onClick={(event) => { event.stopPropagation(); scrollModalTo(modalIndex - 1); }}
+                >
+                  &#8249;
+                </button>
+              ) : null}
+
+              {modalIndex < selectedImage.urls.length - 1 ? (
+                <button
+                  className="image-modal-nav next"
+                  type="button"
+                  aria-label="Next image"
+                  onClick={(event) => { event.stopPropagation(); scrollModalTo(modalIndex + 1); }}
+                >
+                  &#8250;
+                </button>
+              ) : null}
+
+              <div className="image-modal-dots">
+                {selectedImage.urls.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`carousel-dot${i === modalIndex ? " active" : ""}`}
+                    aria-label={`Go to image ${i + 1}`}
+                    onClick={(event) => { event.stopPropagation(); scrollModalTo(i); }}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       ) : null}
     </main>

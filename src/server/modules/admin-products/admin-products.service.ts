@@ -1,6 +1,21 @@
 import { AppError } from "@/server/shared/errors/app-error";
 
 import { adminProductsRepository } from "@/server/modules/admin-products/admin-products.repository";
+import type { Product } from "@/shared/types/domain";
+
+type ProductWithImages = Product & {
+  images: { id: string; position: number }[];
+};
+
+function mapImageUrls(product: ProductWithImages) {
+  const imageUrls = product.images.length > 0
+    ? product.images.map((img) => `/api/v1/images/${img.id}`)
+    : product.imageUrl
+      ? [product.imageUrl]
+      : [];
+
+  return { ...product, imageUrls };
+}
 
 type AdminProductCreateInput = {
   name: string;
@@ -46,7 +61,7 @@ export class AdminProductsService {
     const result = await adminProductsRepository.findAll(input);
 
     return {
-      items: result.items,
+      items: result.items.map(mapImageUrls),
       page: input.page,
       pageSize: input.pageSize,
       total: result.total,
@@ -60,7 +75,8 @@ export class AdminProductsService {
       throw new AppError("Product not found", 404, "product_not_found");
     }
 
-    return adminProductsRepository.updateById(id, input);
+    const updated = await adminProductsRepository.updateById(id, input);
+    return mapImageUrls(updated);
   }
 
   private async generateUniqueSlug(name: string): Promise<string> {
@@ -79,7 +95,7 @@ export class AdminProductsService {
   async create(input: AdminProductCreateInput) {
     const slug = await this.generateUniqueSlug(input.name);
 
-    return adminProductsRepository.create({
+    const created = await adminProductsRepository.create({
       slug,
       name: input.name,
       description: input.description,
@@ -91,6 +107,8 @@ export class AdminProductsService {
       imageUrl: input.imageUrl ?? null,
       isAvailable: input.isAvailable ?? true
     });
+
+    return mapImageUrls(created);
   }
 
   async deleteById(id: string) {
@@ -106,6 +124,20 @@ export class AdminProductsService {
     }
 
     await adminProductsRepository.deleteById(id);
+  }
+
+  async deleteImage(productId: string, imageId: string) {
+    const product = await adminProductsRepository.findById(productId);
+    if (!product) {
+      throw new AppError("Product not found", 404, "product_not_found");
+    }
+
+    const imageExists = product.images.some((img) => img.id === imageId);
+    if (!imageExists) {
+      throw new AppError("Image not found on this product", 404, "image_not_found");
+    }
+
+    await adminProductsRepository.deleteImage(imageId);
   }
 }
 

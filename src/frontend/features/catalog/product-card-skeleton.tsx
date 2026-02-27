@@ -1,7 +1,7 @@
 export function ProductCardSkeleton() {
   return (
     <article className="card product-card">
-      <div className="skeleton" style={{ width: "100%", height: 160, borderRadius: 12 }} />
+      <div className="skeleton" style={{ width: "100%", height: 220, borderRadius: 12 }} />
       <div className="skeleton" style={{ width: "60%", height: 20, marginTop: "0.85rem" }} />
       <div className="skeleton" style={{ width: "100%", height: 14, marginTop: "0.5rem" }} />
       <div className="skeleton" style={{ width: "80%", height: 14, marginTop: "0.25rem" }} />

@@ -8,6 +8,7 @@ export type Product = {
   size: string | null;
   calories: number | null;
   imageUrl: string | null;
+  imageUrls?: string[];
   isAvailable: boolean;
   category: string | null;
 };

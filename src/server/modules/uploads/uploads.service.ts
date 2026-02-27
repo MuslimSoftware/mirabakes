@@ -1,8 +1,5 @@
-import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { AppError } from "@/server/shared/errors/app-error";
+import { prisma } from "@/server/shared/db/prisma";
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -14,7 +11,6 @@ const ALLOWED_TYPES = new Set([
   "image/avif"
 ]);
 const MAX_SIZE_BYTES = 10 * 1024 * 1024;
-const UPLOADS_DIR = join(process.cwd(), "public", "uploads");
 const CONVERT_TO_JPEG_TYPES = new Set(["image/heic", "image/heif", "image/avif"]);
 
 const MIME_BY_EXTENSION: Record<string, string> = {
@@ -26,32 +22,6 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   heif: "image/heif",
   avif: "image/avif"
 };
-
-function ensureUploadsDir() {
-  if (!existsSync(UPLOADS_DIR)) {
-    mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
-}
-
-function extensionForType(mimeType: string): string {
-  switch (mimeType) {
-    case "image/jpeg":
-    case "image/jpg":
-      return ".jpg";
-    case "image/png":
-      return ".png";
-    case "image/webp":
-      return ".webp";
-    case "image/heic":
-      return ".heic";
-    case "image/heif":
-      return ".heif";
-    case "image/avif":
-      return ".avif";
-    default:
-      return "";
-  }
-}
 
 function resolveMimeType(file: File): string | null {
   const normalizedType = file.type.toLowerCase();
@@ -71,14 +41,10 @@ function resolveMimeType(file: File): string | null {
   return MIME_BY_EXTENSION[extension] ?? null;
 }
 
-async function convertImageIfNeeded(
+async function processImage(
   buffer: Buffer,
   mimeType: string
 ): Promise<{ buffer: Buffer; mimeType: string }> {
-  if (!CONVERT_TO_JPEG_TYPES.has(mimeType)) {
-    return { buffer, mimeType };
-  }
-
   let sharpFactory: (input: Buffer) => import("sharp").Sharp;
   try {
     const sharpModule = await import("sharp");
@@ -86,23 +52,27 @@ async function convertImageIfNeeded(
       input: Buffer
     ) => import("sharp").Sharp;
   } catch {
-    throw new AppError(
-      "Image conversion is unavailable on the server",
-      500,
-      "image_conversion_unavailable"
-    );
+    if (CONVERT_TO_JPEG_TYPES.has(mimeType)) {
+      throw new AppError("Image conversion is unavailable on the server", 500, "image_conversion_unavailable");
+    }
+    return { buffer, mimeType };
   }
 
   try {
-    const convertedBuffer = await sharpFactory(buffer).rotate().jpeg({ quality: 88 }).toBuffer();
-    return { buffer: convertedBuffer, mimeType: "image/jpeg" };
+    if (CONVERT_TO_JPEG_TYPES.has(mimeType)) {
+      const converted = await sharpFactory(buffer).rotate().resize(1200, undefined, { withoutEnlargement: true }).jpeg({ quality: 88 }).toBuffer();
+      return { buffer: converted, mimeType: "image/jpeg" };
+    }
+
+    const resized = await sharpFactory(buffer).rotate().resize(1200, undefined, { withoutEnlargement: true }).toBuffer();
+    return { buffer: resized, mimeType };
   } catch {
     throw new AppError("Could not process image file", 400, "invalid_image_file");
   }
 }
 
 export const uploadsService = {
-  async saveImage(file: File): Promise<string> {
+  async saveImage(file: File, productId: string): Promise<{ id: string; url: string }> {
     const mimeType = resolveMimeType(file);
     if (!mimeType) {
       throw new AppError(
@@ -116,19 +86,28 @@ export const uploadsService = {
       throw new AppError("Image must be under 10 MB", 400, "file_too_large");
     }
 
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) {
+      throw new AppError("Product not found", 404, "product_not_found");
+    }
+
     const sourceBuffer = Buffer.from(await file.arrayBuffer());
-    const converted = await convertImageIfNeeded(sourceBuffer, mimeType);
-    const hash = createHash("sha256")
-      .update(converted.buffer)
-      .update(randomBytes(8))
-      .digest("hex")
-      .slice(0, 16);
-    const ext = extensionForType(converted.mimeType);
-    const filename = `${hash}${ext}`;
+    const processed = await processImage(sourceBuffer, mimeType);
 
-    ensureUploadsDir();
-    writeFileSync(join(UPLOADS_DIR, filename), converted.buffer);
+    const maxPosition = await prisma.productImage.aggregate({
+      where: { productId },
+      _max: { position: true }
+    });
 
-    return `/uploads/${filename}`;
+    const image = await prisma.productImage.create({
+      data: {
+        productId,
+        data: new Uint8Array(processed.buffer),
+        mimeType: processed.mimeType,
+        position: (maxPosition._max.position ?? -1) + 1
+      }
+    });
+
+    return { id: image.id, url: `/api/v1/images/${image.id}` };
   }
 };

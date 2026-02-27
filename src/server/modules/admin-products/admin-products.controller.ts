@@ -116,6 +116,19 @@ export class AdminProductsController {
       return handleRouteError(error);
     }
   }
+
+  async deleteImage(request: Request, productId: string, imageId: string) {
+    try {
+      assertAdminRequest(request);
+      await adminProductsService.deleteImage(productId, imageId);
+
+      return NextResponse.json({
+        data: { deleted: true }
+      });
+    } catch (error) {
+      return handleRouteError(error);
+    }
+  }
 }
 
 export const adminProductsController = new AdminProductsController();

@@ -24,7 +24,8 @@
 - Admin panel at `/admin` with tabbed interface (Products / Orders).
 - Admin Products tab with token input, filtering, pagination, read-only cards, edit icon flow, and delete icon flow.
 - Admin Products tab supports create (toggled via `Create Product` button), update, and delete with confirmation.
-- Admin create/edit forms support image URL entry and file upload with image preview.
+- Admin create/edit forms support multi-image gallery with upload and per-image delete.
+- Product cards use CSS scroll-snap carousel for multi-image products.
 - Admin Orders tab with paginated order list, status filtering, and order detail cards (order number, status, date, total, customer phone/email, line items).
 - Product cards use flex-column layout for consistent price/action row alignment across grid.
 - API abstraction layer:
@@ -44,6 +45,7 @@
   - Orders
   - Payments
   - Uploads
+  - Images (public image serving from DB)
   - Stripe Webhooks
   - Health
 - Shared server utilities (`src/server/shared/`):
@@ -67,11 +69,14 @@
 - `PATCH /api/v1/admin/products/:id` (token-protected)
 - `DELETE /api/v1/admin/products/:id` (token-protected)
 - `GET /api/v1/admin/orders` (token-protected, pagination + status filter)
-- `POST /api/v1/admin/uploads/image` (token-protected)
+- `DELETE /api/v1/admin/products/:id/images/:imageId` (token-protected)
+- `POST /api/v1/admin/uploads/image` (token-protected, requires `productId` field)
+- `GET /api/v1/images/:id` (public, serves image binary from DB with immutable caching)
 - `GET /api/health`
 
 ## Data Model (Prisma)
 - `Product` (includes optional `category`)
+- `ProductImage` (stores image binary data in DB; fields: `id`, `productId`, `data` (Bytes), `mimeType`, `position`, `createdAt`)
 - `Order` (includes optional `customerPhone`)
 - `OrderItem`
 - `Payment`
@@ -100,11 +105,15 @@
 - **Images:** native `loading="lazy"` on product images.
 - **Perceived loading:** product card skeleton components render while product queries are loading.
 
-## Upload Strategy
-- Uploaded product images are stored under `public/uploads`.
-- `POST /api/v1/admin/uploads/image` accepts `multipart/form-data` with `file`.
-- Allowed image types: `jpeg`, `png`, `webp`; max file size: 5 MB.
-- Successful uploads return a public relative URL (`/uploads/<filename>`), used directly in product `imageUrl`.
+## Image Strategy
+- Product images are stored as binary data in PostgreSQL (`ProductImage` table), surviving container rebuilds.
+- `POST /api/v1/admin/uploads/image` accepts `multipart/form-data` with `file` and `productId`.
+- Images are resized (max 1200px width) via Sharp before storage; HEIC/HEIF/AVIF auto-converted to JPEG.
+- Allowed image types: `jpeg`, `png`, `webp`, `heic`, `heif`, `avif`; max file size: 10 MB.
+- Multiple images per product, ordered by `position` field.
+- Served via `GET /api/v1/images/:id` with `Cache-Control: public, max-age=31536000, immutable`.
+- Products return `imageUrls: string[]` array; backward compat: falls back to legacy `imageUrl` if no `ProductImage` records.
+- Mobile store uses single-column layout with CSS scroll-snap carousel for multi-image products.
 
 ## Not Yet Implemented
 - Real auth/admin permissions.

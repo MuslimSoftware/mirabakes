@@ -76,5 +76,12 @@ export const adminProductsClient = {
       method: "DELETE",
       headers: adminHeaders(token)
     });
+  },
+
+  deleteImage(productId: string, imageId: string, token: string) {
+    return apiRequest<{ deleted: boolean }>(`/api/v1/admin/products/${productId}/images/${imageId}`, {
+      method: "DELETE",
+      headers: adminHeaders(token)
+    });
   }
 };

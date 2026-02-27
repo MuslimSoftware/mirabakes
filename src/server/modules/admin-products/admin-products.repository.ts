@@ -34,8 +34,19 @@ type AdminProductCreateInput = {
   isAvailable: boolean;
 };
 
+const imagesInclude = {
+  images: {
+    select: { id: true, position: true },
+    orderBy: { position: "asc" as const }
+  }
+};
+
+type ProductWithImages = Product & {
+  images: { id: string; position: number }[];
+};
+
 export class AdminProductsRepository {
-  async findAll(input: ListAdminProductsInput): Promise<{ items: Product[]; total: number }> {
+  async findAll(input: ListAdminProductsInput): Promise<{ items: ProductWithImages[]; total: number }> {
     const skip = (input.page - 1) * input.pageSize;
     const where = {
       ...(input.category ? { category: input.category } : {}),
@@ -55,7 +66,8 @@ export class AdminProductsRepository {
         where,
         skip,
         take: input.pageSize,
-        orderBy: { updatedAt: "desc" }
+        orderBy: { updatedAt: "desc" },
+        include: imagesInclude
       }),
       prisma.product.count({ where })
     ]);
@@ -63,24 +75,29 @@ export class AdminProductsRepository {
     return { items, total };
   }
 
-  async findById(id: string): Promise<Product | null> {
-    return prisma.product.findUnique({ where: { id } });
+  async findById(id: string): Promise<ProductWithImages | null> {
+    return prisma.product.findUnique({
+      where: { id },
+      include: imagesInclude
+    });
   }
 
   async findBySlug(slug: string): Promise<Product | null> {
     return prisma.product.findUnique({ where: { slug } });
   }
 
-  async create(input: AdminProductCreateInput): Promise<Product> {
+  async create(input: AdminProductCreateInput): Promise<ProductWithImages> {
     return prisma.product.create({
-      data: input
+      data: input,
+      include: imagesInclude
     });
   }
 
-  async updateById(id: string, update: AdminProductUpdateInput): Promise<Product> {
+  async updateById(id: string, update: AdminProductUpdateInput): Promise<ProductWithImages> {
     return prisma.product.update({
       where: { id },
-      data: update
+      data: update,
+      include: imagesInclude
     });
   }
 
@@ -102,6 +119,12 @@ export class AdminProductsRepository {
       data: {
         isAvailable: false
       }
+    });
+  }
+
+  async deleteImage(imageId: string): Promise<void> {
+    await prisma.productImage.delete({
+      where: { id: imageId }
     });
   }
 }
