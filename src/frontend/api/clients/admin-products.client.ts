@@ -78,6 +78,14 @@ export const adminProductsClient = {
     });
   },
 
+  reorder(items: { id: string; position: number }[], token: string) {
+    return apiRequest<{ success: boolean }>("/api/v1/admin/products/reorder", {
+      method: "PATCH",
+      body: { items },
+      headers: adminHeaders(token)
+    });
+  },
+
   deleteImage(productId: string, imageId: string, token: string) {
     return apiRequest<{ deleted: boolean }>(`/api/v1/admin/products/${productId}/images/${imageId}`, {
       method: "DELETE",

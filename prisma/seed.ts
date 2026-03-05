@@ -44,7 +44,8 @@ const seedProducts = [
 async function main() {
   await prisma.product.deleteMany();
 
-  for (const product of seedProducts) {
+  for (let i = 0; i < seedProducts.length; i++) {
+    const product = seedProducts[i];
     await prisma.product.upsert({
       where: { slug: product.slug },
       update: {
@@ -53,9 +54,10 @@ async function main() {
         priceCents: product.priceCents,
         category: product.category,
         imageUrl: product.imageUrl,
-        isAvailable: product.isAvailable
+        isAvailable: product.isAvailable,
+        position: i
       },
-      create: product
+      create: { ...product, position: i }
     });
   }
 

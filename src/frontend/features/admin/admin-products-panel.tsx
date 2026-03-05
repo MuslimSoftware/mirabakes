@@ -638,6 +638,12 @@ export function AdminProductsPanel({ token }: { token: string }) {
     onSuccess: refreshList
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: async (items: { id: string; position: number }[]) =>
+      adminProductsClient.reorder(items, token),
+    onSuccess: refreshList
+  });
+
   function refreshList() {
     queryClient.invalidateQueries({ queryKey: ["admin-products", token] });
   }
@@ -650,6 +656,19 @@ export function AdminProductsPanel({ token }: { token: string }) {
   function handleEditSaved() {
     setEditingProductId(null);
     refreshList();
+  }
+
+  function handleMoveProduct(index: number, direction: "up" | "down") {
+    const items = productsQuery.data?.items;
+    if (!items) return;
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= items.length) return;
+    const a = items[index];
+    const b = items[swapIndex];
+    reorderMutation.mutate([
+      { id: a.id, position: swapIndex },
+      { id: b.id, position: index }
+    ]);
   }
 
   function handleDelete(product: Product) {
@@ -734,12 +753,14 @@ export function AdminProductsPanel({ token }: { token: string }) {
                 <th>Category</th>
                 <th className="text-right">Price</th>
                 <th>Status</th>
-                <th style={{ width: 90 }}>Actions</th>
+                <th style={{ width: 160 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {productsQuery.data.items.map((product) => {
+              {productsQuery.data.items.map((product, index) => {
                 const thumbUrl = product.imageUrls?.[0] ?? product.imageUrl;
+                const isFirst = index === 0;
+                const isLast = index === productsQuery.data!.items.length - 1;
                 return (
                   <tr
                     key={product.id}
@@ -762,6 +783,26 @@ export function AdminProductsPanel({ token }: { token: string }) {
                     </td>
                     <td>
                       <div style={{ display: "flex", gap: "0.25rem" }}>
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => handleMoveProduct(index, "up")}
+                          disabled={isFirst || reorderMutation.isPending}
+                          title="Move up"
+                          style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
+                        >
+                          &#9650;
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => handleMoveProduct(index, "down")}
+                          disabled={isLast || reorderMutation.isPending}
+                          title="Move down"
+                          style={{ padding: "0.3rem 0.5rem", fontSize: "0.85rem" }}
+                        >
+                          &#9660;
+                        </button>
                         <button
                           type="button"
                           className="secondary"

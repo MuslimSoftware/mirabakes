@@ -66,7 +66,7 @@ export class AdminProductsRepository {
         where,
         skip,
         take: input.pageSize,
-        orderBy: { updatedAt: "desc" },
+        orderBy: [{ position: "asc" }, { updatedAt: "desc" }],
         include: imagesInclude
       }),
       prisma.product.count({ where })
@@ -126,6 +126,17 @@ export class AdminProductsRepository {
     await prisma.productImage.delete({
       where: { id: imageId }
     });
+  }
+
+  async updatePositions(items: { id: string; position: number }[]): Promise<void> {
+    await prisma.$transaction(
+      items.map((item) =>
+        prisma.product.update({
+          where: { id: item.id },
+          data: { position: item.position }
+        })
+      )
+    );
   }
 }
 

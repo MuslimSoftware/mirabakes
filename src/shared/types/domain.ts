@@ -11,6 +11,7 @@ export type Product = {
   imageUrls?: string[];
   isAvailable: boolean;
   category: string | null;
+  position: number;
 };
 
 export type OrderStatus = "pending" | "paid" | "failed" | "cancelled" | "refunded";

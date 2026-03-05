@@ -126,6 +126,10 @@ export class AdminProductsService {
     await adminProductsRepository.deleteById(id);
   }
 
+  async reorder(items: { id: string; position: number }[]) {
+    await adminProductsRepository.updatePositions(items);
+  }
+
   async deleteImage(productId: string, imageId: string) {
     const product = await adminProductsRepository.findById(productId);
     if (!product) {

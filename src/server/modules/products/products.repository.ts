@@ -40,7 +40,7 @@ export class ProductsRepository {
         where,
         skip,
         take: input.pageSize,
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ position: "asc" }, { createdAt: "desc" }],
         include: imagesInclude
       }),
       prisma.product.count({ where })

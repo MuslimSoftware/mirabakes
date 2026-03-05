@@ -22,6 +22,15 @@ const updateProductSchema = z
     message: "At least one field is required"
   });
 
+const reorderSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string().min(1),
+      position: z.number().int().min(0)
+    })
+  ).min(1)
+});
+
 const createProductSchema = z.object({
   name: z.string().trim().min(1),
   description: z.string().trim().min(1),
@@ -112,6 +121,24 @@ export class AdminProductsController {
           deleted: true
         }
       });
+    } catch (error) {
+      return handleRouteError(error);
+    }
+  }
+
+  async reorder(request: Request) {
+    try {
+      assertAdminRequest(request);
+
+      const payload = await request.json();
+      const parsed = reorderSchema.safeParse(payload);
+
+      if (!parsed.success) {
+        throw new AppError("Invalid reorder payload", 400, "invalid_reorder_payload");
+      }
+
+      await adminProductsService.reorder(parsed.data.items);
+      return NextResponse.json({ data: { success: true } });
     } catch (error) {
       return handleRouteError(error);
     }
